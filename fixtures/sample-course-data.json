@@ -1,0 +1,299 @@
+{
+  "courses": [
+    {
+      "course_id": "course-ece420",
+      "course_name": "Parallel & Distributed Programming",
+      "course_code": "ECE 420",
+      "created_at": "2026-03-09T12:00:00Z",
+      "updated_at": "2026-03-09T12:00:00Z",
+      "units": [
+        {
+          "unit_id": "unit-processes-threads",
+          "unit_name": "Processes and Threads",
+          "sort_order": 1,
+          "created_at": "2026-03-09T12:00:00Z",
+          "updated_at": "2026-03-09T12:00:00Z",
+          "topics": [
+            {
+              "topic_id": "topic-race-conditions",
+              "topic_name": "Race Conditions",
+              "sort_order": 1,
+              "created_at": "2026-03-09T12:00:00Z",
+              "updated_at": "2026-03-09T12:00:00Z",
+              "questions": [
+                {
+                  "question_id": "q-race-001",
+                  "question_type": "single_best",
+                  "title": "Race condition definition",
+                  "difficulty": 2,
+                  "stem_rich_text": "<p>Which statement best describes a <strong>race condition</strong>?</p>",
+                  "main_explanation_rich_text": "<p>A race condition occurs when program behavior depends on the timing or ordering of concurrent operations on shared state.</p>",
+                  "reference_text": "Lecture notes: concurrency fundamentals",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false,
+                  "choices": [
+                    {
+                      "choice_id": "q-race-001-a",
+                      "label": "A",
+                      "choice_rich_text": "<p>A race condition occurs when two threads execute in parallel, regardless of shared memory.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>Parallel execution alone is not enough. Shared state and timing-sensitive behavior are the real issue.</p>",
+                      "sort_order": 1
+                    },
+                    {
+                      "choice_id": "q-race-001-b",
+                      "label": "B",
+                      "choice_rich_text": "<p>A race condition occurs when program output depends on the non-deterministic ordering of concurrent access to shared state.</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>This is the best definition.</p>",
+                      "sort_order": 2
+                    },
+                    {
+                      "choice_id": "q-race-001-c",
+                      "label": "C",
+                      "choice_rich_text": "<p>A race condition occurs only when a deadlock happens.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>Deadlock and race conditions are different failure modes.</p>",
+                      "sort_order": 3
+                    },
+                    {
+                      "choice_id": "q-race-001-d",
+                      "label": "D",
+                      "choice_rich_text": "<p>A race condition occurs only in distributed systems.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>They also occur in multi-threaded local programs.</p>",
+                      "sort_order": 4
+                    }
+                  ]
+                },
+                {
+                  "question_id": "q-race-002",
+                  "question_type": "multi_select",
+                  "title": "Ways to reduce race conditions",
+                  "difficulty": 3,
+                  "stem_rich_text": "<p>Which of the following techniques can reduce or eliminate race conditions? Select all that apply.</p>",
+                  "main_explanation_rich_text": "<p>Synchronization and reducing shared mutable state are common strategies.</p>",
+                  "reference_text": "Lecture notes: locks and synchronization",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": true,
+                  "is_flagged": false,
+                  "choices": [
+                    {
+                      "choice_id": "q-race-002-a",
+                      "label": "A",
+                      "choice_rich_text": "<p>Use mutexes around critical sections.</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>Mutexes protect shared state by controlling access.</p>",
+                      "sort_order": 1
+                    },
+                    {
+                      "choice_id": "q-race-002-b",
+                      "label": "B",
+                      "choice_rich_text": "<p>Use immutable data where practical.</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>Immutable data reduces shared mutable state bugs.</p>",
+                      "sort_order": 2
+                    },
+                    {
+                      "choice_id": "q-race-002-c",
+                      "label": "C",
+                      "choice_rich_text": "<p>Increase CPU clock speed.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>That does not solve synchronization issues.</p>",
+                      "sort_order": 3
+                    },
+                    {
+                      "choice_id": "q-race-002-d",
+                      "label": "D",
+                      "choice_rich_text": "<p>Use atomic operations where appropriate.</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>Atomic operations can eliminate some races on shared variables.</p>",
+                      "sort_order": 4
+                    }
+                  ]
+                },
+                {
+                  "question_id": "q-race-003",
+                  "question_type": "short_answer",
+                  "title": "Critical section meaning",
+                  "difficulty": 2,
+                  "stem_rich_text": "<p>Define a <strong>critical section</strong> in concurrent programming.</p>",
+                  "model_answer_rich_text": "<p>A critical section is a portion of code that accesses shared state and must not be executed by more than one thread or process at the same time.</p>",
+                  "main_explanation_rich_text": "<p>The key idea is mutually exclusive access to shared resources.</p>",
+                  "reference_text": "Lecture notes: critical sections",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false
+                }
+              ],
+              "flashcards": [
+                {
+                  "flashcard_id": "fc-race-001",
+                  "front_rich_text": "<p>What is a race condition?</p>",
+                  "back_rich_text": "<p>A bug where behavior depends on the timing/order of concurrent accesses to shared state.</p>",
+                  "reference_text": "Lecture notes: concurrency fundamentals",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false
+                },
+                {
+                  "flashcard_id": "fc-race-002",
+                  "front_rich_text": "<p>What is a critical section?</p>",
+                  "back_rich_text": "<p>A portion of code that accesses shared state and requires mutual exclusion.</p>",
+                  "reference_text": "Lecture notes: critical sections",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": true,
+                  "is_flagged": false
+                }
+              ]
+            },
+            {
+              "topic_id": "topic-thread-basics",
+              "topic_name": "Thread Basics",
+              "sort_order": 2,
+              "created_at": "2026-03-09T12:00:00Z",
+              "updated_at": "2026-03-09T12:00:00Z",
+              "questions": [
+                {
+                  "question_id": "q-thread-001",
+                  "question_type": "true_false",
+                  "title": "Process memory sharing",
+                  "difficulty": 1,
+                  "stem_rich_text": "<p>True or False: Threads in the same process generally share the same address space.</p>",
+                  "main_explanation_rich_text": "<p>True. Threads typically share the process memory space while maintaining separate stacks and registers.</p>",
+                  "reference_text": "Lecture notes: processes vs threads",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": true,
+                  "choices": [
+                    {
+                      "choice_id": "q-thread-001-a",
+                      "label": "A",
+                      "choice_rich_text": "<p>True</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>Correct.</p>",
+                      "sort_order": 1
+                    },
+                    {
+                      "choice_id": "q-thread-001-b",
+                      "label": "B",
+                      "choice_rich_text": "<p>False</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>Incorrect. Different processes generally have separate address spaces; threads within one process share it.</p>",
+                      "sort_order": 2
+                    }
+                  ]
+                }
+              ],
+              "flashcards": [
+                {
+                  "flashcard_id": "fc-thread-001",
+                  "front_rich_text": "<p>Do threads in the same process share an address space?</p>",
+                  "back_rich_text": "<p>Yes. They usually share the address space but have separate execution stacks and registers.</p>",
+                  "reference_text": "Lecture notes: processes vs threads",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "unit_id": "unit-parallel-patterns",
+          "unit_name": "Parallel Patterns",
+          "sort_order": 2,
+          "created_at": "2026-03-09T12:00:00Z",
+          "updated_at": "2026-03-09T12:00:00Z",
+          "topics": [
+            {
+              "topic_id": "topic-map-reduce",
+              "topic_name": "MapReduce",
+              "sort_order": 1,
+              "created_at": "2026-03-09T12:00:00Z",
+              "updated_at": "2026-03-09T12:00:00Z",
+              "questions": [
+                {
+                  "question_id": "q-mapreduce-001",
+                  "question_type": "single_best",
+                  "title": "MapReduce basic role",
+                  "difficulty": 2,
+                  "stem_rich_text": "<p>In MapReduce, what is the primary role of the <strong>reduce</strong> phase?</p>",
+                  "main_explanation_rich_text": "<p>The reduce phase aggregates or combines grouped intermediate results generated by the map phase.</p>",
+                  "reference_text": "Lecture notes: parallel patterns",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false,
+                  "choices": [
+                    {
+                      "choice_id": "q-mapreduce-001-a",
+                      "label": "A",
+                      "choice_rich_text": "<p>It launches worker nodes.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>That is infrastructure/orchestration, not the logical reduce role.</p>",
+                      "sort_order": 1
+                    },
+                    {
+                      "choice_id": "q-mapreduce-001-b",
+                      "label": "B",
+                      "choice_rich_text": "<p>It partitions raw data into shards.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>Input partitioning is not the core reduce responsibility.</p>",
+                      "sort_order": 2
+                    },
+                    {
+                      "choice_id": "q-mapreduce-001-c",
+                      "label": "C",
+                      "choice_rich_text": "<p>It aggregates grouped intermediate key-value results.</p>",
+                      "is_correct": true,
+                      "choice_explanation_rich_text": "<p>Correct.</p>",
+                      "sort_order": 3
+                    },
+                    {
+                      "choice_id": "q-mapreduce-001-d",
+                      "label": "D",
+                      "choice_rich_text": "<p>It serializes thread-local memory to disk.</p>",
+                      "is_correct": false,
+                      "choice_explanation_rich_text": "<p>Not the main logical role of reduce.</p>",
+                      "sort_order": 4
+                    }
+                  ]
+                }
+              ],
+              "flashcards": [
+                {
+                  "flashcard_id": "fc-mapreduce-001",
+                  "front_rich_text": "<p>What does the reduce phase do in MapReduce?</p>",
+                  "back_rich_text": "<p>It aggregates grouped intermediate key-value results.</p>",
+                  "reference_text": "Lecture notes: parallel patterns",
+                  "created_at": "2026-03-09T12:00:00Z",
+                  "updated_at": "2026-03-09T12:00:00Z",
+                  "last_edited_at": "2026-03-09T12:00:00Z",
+                  "is_bookmarked": false,
+                  "is_flagged": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
