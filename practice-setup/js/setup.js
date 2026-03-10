@@ -710,11 +710,14 @@ function recomputeCount() {
   const next = getMatchingCount();
   SetupState.maxCount = next;
 
-  // Clamp effective count to the new available pool
+  // Clamp to available pool; restore toward requestedCount when pool expands.
+  // Fallback to `next` guards the edge case where requestedCount is still 0
+  // (initSetup found no questions), but a filter change later yields a non-empty pool.
   if (next === 0) {
     SetupState.questionCount = 0;
-  } else if (SetupState.questionCount > next || SetupState.questionCount === 0) {
-    SetupState.questionCount = next;
+  } else {
+    SetupState.questionCount = Math.min(SetupState.requestedCount, next);
+    if (SetupState.questionCount < 1) SetupState.questionCount = next;
   }
 
   // Sync number input value
