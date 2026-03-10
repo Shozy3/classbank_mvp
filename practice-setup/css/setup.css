@@ -1,0 +1,583 @@
+/* ==========================================================================
+   Practice Setup — Layout and Components
+   Extends the shared app shell from practice-session/css/layout.css.
+   All color/spacing/type values reference tokens from tokens.css only.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Setup Root — fills remaining space after nav (mirrors #session-root)
+   -------------------------------------------------------------------------- */
+#setup-root {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+/* --------------------------------------------------------------------------
+   Setup Header — course info bar (mirrors #session-header look)
+   -------------------------------------------------------------------------- */
+#setup-header {
+  min-height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Setup Body — two-column flex row
+   -------------------------------------------------------------------------- */
+#setup-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Filters Column (left)
+   -------------------------------------------------------------------------- */
+.setup-filters {
+  flex: 1.5;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--sp-6) var(--sp-6);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* --------------------------------------------------------------------------
+   Options Column (right)
+   -------------------------------------------------------------------------- */
+.setup-options {
+  flex: 1;
+  min-width: 260px;
+  max-width: 380px;
+  overflow-y: auto;
+  padding: var(--sp-6) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* --------------------------------------------------------------------------
+   Section — shared between both columns
+   -------------------------------------------------------------------------- */
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.setup-section-header {
+  font-size: var(--text-size-dense);
+  font-weight: var(--text-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Course display (read-only, single course)
+   -------------------------------------------------------------------------- */
+.setup-course-display {
+  font-size: var(--text-size-small);
+  font-weight: var(--text-weight-semibold);
+  color: var(--text-primary);
+  background: var(--bg-panel-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  padding: var(--sp-2) var(--sp-3);
+  line-height: var(--line-height-dense);
+}
+
+.setup-course-display .course-code {
+  color: var(--text-muted);
+  font-weight: var(--text-weight-regular);
+  font-size: var(--text-size-dense);
+  margin-left: var(--sp-1);
+}
+
+/* --------------------------------------------------------------------------
+   Checkbox groups
+   -------------------------------------------------------------------------- */
+.setup-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.setup-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  user-select: none;
+}
+
+.setup-checkbox-item:hover {
+  background: var(--hover-bg);
+}
+
+.setup-checkbox-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.setup-checkbox-item input[type="checkbox"]:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.setup-checkbox-label {
+  font-size: var(--text-size-small);
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.setup-checkbox-item.is-disabled .setup-checkbox-label {
+  color: var(--text-muted);
+}
+
+/* Topic groups nested under units */
+.topic-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.topic-group + .topic-group {
+  margin-top: var(--sp-2);
+}
+
+.topic-group-unit-label {
+  font-size: var(--text-size-dense);
+  font-weight: var(--text-weight-medium);
+  color: var(--text-secondary);
+  padding: 0 var(--sp-2);
+  margin-bottom: 2px;
+}
+
+.topic-group .setup-checkbox-item {
+  padding-left: var(--sp-4);
+}
+
+/* --------------------------------------------------------------------------
+   Question count row
+   -------------------------------------------------------------------------- */
+.setup-count-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.setup-count-input {
+  width: 72px;
+  height: 34px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-size-body);
+  font-weight: var(--text-weight-medium);
+  text-align: center;
+  padding: 0 var(--sp-2);
+  transition: border-color var(--transition-fast);
+  -moz-appearance: textfield;
+}
+
+.setup-count-input::-webkit-inner-spin-button,
+.setup-count-input::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+.setup-count-input:focus {
+  outline: none;
+  border-color: var(--selected-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.setup-count-of-label {
+  font-size: var(--text-size-small);
+  color: var(--text-secondary);
+}
+
+.setup-count-of-label .count-total {
+  font-weight: var(--text-weight-semibold);
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Session Mode badge (right column)
+   -------------------------------------------------------------------------- */
+.setup-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-3);
+  background: var(--accent-muted);
+  border: 1px solid rgba(59, 130, 246, 0.30);
+  border-radius: var(--radius-control);
+  font-size: var(--text-size-small);
+  font-weight: var(--text-weight-semibold);
+  color: var(--accent);
+  align-self: flex-start;
+}
+
+.setup-mode-badge .mode-icon {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.setup-mode-note {
+  font-size: var(--text-size-dense);
+  color: var(--text-muted);
+  line-height: var(--line-height-body);
+}
+
+/* --------------------------------------------------------------------------
+   Toggle rows
+   -------------------------------------------------------------------------- */
+.setup-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--sp-3);
+  background: var(--bg-panel-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  gap: var(--sp-3);
+}
+
+.toggle-label {
+  font-size: var(--text-size-small);
+  font-weight: var(--text-weight-medium);
+  color: var(--text-primary);
+}
+
+/* Toggle switch — input[type=checkbox] + styled span */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle-input {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border-strong);
+  border-radius: var(--radius-badge);
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+
+.toggle-track::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  top: 3px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: transform var(--transition-normal), background var(--transition-normal);
+}
+
+.toggle-input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-input:checked + .toggle-track::before {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.toggle-input:focus-visible + .toggle-track {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* --------------------------------------------------------------------------
+   Session summary card
+   -------------------------------------------------------------------------- */
+.setup-summary-card {
+  background: var(--bg-panel-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.summary-count-line {
+  font-size: var(--text-size-section);
+  font-weight: var(--text-weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.summary-count-line .count-number {
+  color: var(--accent);
+}
+
+.summary-detail-line {
+  font-size: var(--text-size-small);
+  color: var(--text-secondary);
+  line-height: var(--line-height-body);
+}
+
+.summary-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.30);
+  border-radius: var(--radius-small);
+  font-size: var(--text-size-dense);
+  color: var(--warning);
+  line-height: var(--line-height-body);
+}
+
+.summary-warning-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+  opacity: 0.90;
+  margin-top: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   Start Session button
+   -------------------------------------------------------------------------- */
+.btn-start-session {
+  width: 100%;
+  height: 40px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-control);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: var(--text-size-small);
+  font-weight: var(--text-weight-semibold);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+  margin-top: auto;
+}
+
+.btn-start-session:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-start-session:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.btn-start-session:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbar styling (webkit — consistent with session)
+   -------------------------------------------------------------------------- */
+.setup-filters::-webkit-scrollbar,
+.setup-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.setup-filters::-webkit-scrollbar-track,
+.setup-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.setup-filters::-webkit-scrollbar-thumb,
+.setup-options::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-badge);
+}
+
+/* --------------------------------------------------------------------------
+   Mode selection group (radio-card list)
+   -------------------------------------------------------------------------- */
+.setup-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.setup-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: 7px var(--sp-3);
+  background: var(--bg-panel-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  user-select: none;
+}
+
+.setup-mode-option:hover:not(.is-disabled) {
+  background: var(--hover-bg);
+}
+
+.setup-mode-option:has(input:checked) {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+}
+
+.setup-mode-option.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.setup-mode-option input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.setup-mode-option.is-disabled input[type="radio"] {
+  cursor: default;
+}
+
+.mode-option-icon {
+  font-size: 13px;
+  opacity: 0.75;
+  flex-shrink: 0;
+  margin-top: 1px;
+  line-height: 1;
+}
+
+.mode-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mode-option-label {
+  font-size: var(--text-size-small);
+  font-weight: var(--text-weight-medium);
+  color: var(--text-primary);
+  line-height: var(--line-height-dense);
+}
+
+.mode-option-helper {
+  font-size: var(--text-size-dense);
+  color: var(--text-muted);
+  line-height: var(--line-height-body);
+}
+
+/* --------------------------------------------------------------------------
+   Timer options (radio styled as checkbox-item rows)
+   -------------------------------------------------------------------------- */
+.setup-timer-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  user-select: none;
+}
+
+.setup-timer-option:hover:not(.is-disabled) {
+  background: var(--hover-bg);
+}
+
+.setup-timer-option input[type="radio"] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.setup-timer-option.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Count clamp notice (inside summary card)
+   -------------------------------------------------------------------------- */
+.count-clamp-notice {
+  font-size: var(--text-size-dense);
+  color: var(--accent);
+  line-height: var(--line-height-body);
+  padding-top: var(--sp-1);
+}
+
+/* --------------------------------------------------------------------------
+   Timer group shared helper text
+   -------------------------------------------------------------------------- */
+.timer-group-helper {
+  font-size: var(--text-size-dense);
+  color: var(--text-muted);
+  line-height: var(--line-height-body);
+  margin-top: var(--sp-1);
+}
+
+/* --------------------------------------------------------------------------
+   Disabled toggle rows and label groups
+   -------------------------------------------------------------------------- */
+.toggle-row.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.toggle-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-helper-text {
+  font-size: var(--text-size-dense);
+  color: var(--text-muted);
+  line-height: var(--line-height-body);
+}

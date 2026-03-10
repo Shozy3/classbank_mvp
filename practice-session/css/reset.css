@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Reset — ClassBank Practice Session
+   Minimal opinionated reset. Builds on tokens.css.
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-size-body);
+  line-height: var(--line-height-body);
+  overflow: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--text-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+p {
+  margin: 0 0 var(--sp-3);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+}
+
+ul[role="list"],
+ol[role="list"] {
+  list-style: none;
+}
+
+li {
+  margin: 0;
+}
+
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--text-size-body);
+  color: inherit;
+  line-height: 1;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+textarea, input {
+  font-family: var(--font-ui);
+  font-size: var(--text-size-body);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  outline: none;
+}
+
+textarea:focus, input:focus {
+  border-color: var(--selected-border);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-size-mono);
+}
+
+strong {
+  font-weight: var(--text-weight-semibold);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Prevent user-select on UI chrome, allow it on content */
+button, label {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

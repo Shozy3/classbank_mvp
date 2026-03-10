@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassBank — Practice Session</title>
+
+  <!-- Design tokens first, then reset, then layout, then components -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+<div id="app-shell">
+
+  <!-- =====================================================================
+       App Nav Sidebar
+  ====================================================================== -->
+  <nav id="app-nav" aria-label="Main navigation">
+    <div class="nav-logo">Class<span>Bank</span></div>
+
+    <a class="nav-link" href="#" tabindex="-1">
+      <span class="nav-link-icon">▤</span> Library
+    </a>
+    <a class="nav-link" href="#" tabindex="-1">
+      <span class="nav-link-icon">✎</span> Authoring
+    </a>
+    <a class="nav-link" href="../practice-setup/index.html">
+      <span class="nav-link-icon">◈</span> Practice Setup
+    </a>
+    <a class="nav-link active" href="#" aria-current="page">
+      <span class="nav-link-icon">▷</span> Practice Session
+    </a>
+    <a class="nav-link" href="#" tabindex="-1">
+      <span class="nav-link-icon">◷</span> Review History
+    </a>
+    <a class="nav-link" href="#" tabindex="-1">
+      <span class="nav-link-icon">▦</span> Stats Dashboard
+    </a>
+  </nav>
+
+  <!-- =====================================================================
+       Session Root
+  ====================================================================== -->
+  <div id="session-root">
+
+    <!-- Session Header -->
+    <header id="session-header" aria-label="Session info">
+      <div class="header-zone header-zone-left">
+        <div class="header-path-kicker">Practice Session</div>
+        <div class="header-course" id="header-course">ECE 420 — Parallel &amp; Distributed Programming</div>
+        <div class="header-topic" id="header-topic">Processes &amp; Threads · Race Conditions</div>
+      </div>
+
+      <div class="header-zone header-zone-center" aria-live="polite">
+        <span class="header-mode-badge" id="header-mode">Free Practice</span>
+        <div class="header-state-cluster">
+          <span class="header-state-label" id="header-state-label">Awaiting Reveal</span>
+          <span class="header-state-detail" id="header-state-detail">Select an answer to continue.</span>
+        </div>
+      </div>
+
+      <div class="header-zone header-zone-right">
+        <div class="header-metric">
+          <span class="header-metric-label">Timer</span>
+          <span id="timer" class="header-metric-value" title="Elapsed time" aria-label="Timer">00:00</span>
+        </div>
+        <div class="header-metric" aria-live="polite">
+          <span class="header-metric-label">Progress</span>
+          <span class="header-metric-value" id="header-progress">1 of 5</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Session Toolbar (above question panel) -->
+    <div class="toolbar" role="toolbar" aria-label="Session controls">
+      <!-- Populated by renderToolbar() -->
+    </div>
+
+    <!-- Session Body — split view -->
+    <div id="session-body">
+
+      <!-- Left: Question Panel -->
+      <main id="question-panel" aria-label="Question">
+        <!-- Populated by renderQuestionPanel() -->
+      </main>
+
+      <!-- Right: Explanation Panel — ALWAYS mounted, never display:none -->
+      <aside id="explanation-panel" aria-label="Explanation" aria-hidden="true">
+        <div class="explanation-panel-inner">
+          <!-- Populated by renderExplanationPanel() -->
+        </div>
+      </aside>
+
+    </div><!-- /#session-body -->
+
+    <!-- Navigator Strip -->
+    <div id="navigator" role="navigation" aria-label="Question navigator">
+      <!-- Populated by renderNavigator() -->
+    </div>
+
+  </div><!-- /#session-root -->
+
+</div><!-- /#app-shell -->
+
+<script type="module" src="js/session.js"></script>
+</body>
+</html>
