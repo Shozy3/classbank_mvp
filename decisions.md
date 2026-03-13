@@ -162,3 +162,16 @@ Free/educational use is not a magic legal shield.
 
 **Alternatives rejected**
 - “it’s educational so it’s probably fine”
+---
+
+## 2026-03-10 — Electron for the application platform
+**Decision**
+Use Electron with `better-sqlite3` as the application wrapper.
+
+**Why**
+All existing UI is HTML/CSS/JS and works inside an Electron BrowserWindow without modification. `better-sqlite3` provides synchronous SQLite access from the Node.js main process. The renderer communicates with the database through a `contextBridge` IPC API (`window.api`). For a personal single-user local tool, the binary size overhead is irrelevant.
+
+**Alternatives rejected**
+- Tauri: adds a Rust language boundary for all DB access with no benefit for this use case
+- Local Node.js + browser: no double-clickable .app, worse for daily use
+- Swift + WKWebView: requires Swift knowledge and custom JS↔Swift IPC plumbing; no improvement on what matters for MVP

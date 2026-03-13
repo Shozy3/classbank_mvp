@@ -187,7 +187,6 @@ function buildRecallRatingScaffold() {
         <span class="recall-pill is-primary">Good</span>
         <span class="recall-pill">Easy</span>
       </div>
-      <div class="expl-caption">Static placeholder for the short-answer recall controls.</div>
     </div>
   `;
 }

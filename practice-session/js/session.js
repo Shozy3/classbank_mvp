@@ -98,7 +98,8 @@ function dispatch(action) {
     case 'shortAnswerInput':
       updateShortAnswer(idx, action.text);
       // Update state but avoid full re-render on every keystroke;
-      // just mark answered — navigator re-render is cheap
+      // header, navigator, and toolbar are cheap; question/explanation panels are not
+      renderHeader();
       renderNavigator(els.navigator, SessionState);
       renderToolbar(els.toolbar, SessionState);
       return; // early return — skip full renderAll
@@ -187,12 +188,12 @@ function getHeaderStateCopy(item, question) {
   if (!item.isRevealed) {
     if (question.questionType === 'short_answer') {
       return item.isAnswered
-        ? { label: 'Draft Ready',      detail: 'Reveal the model answer when you are done.',              labelClass: '' }
+        ? { label: 'Response Drafted', detail: 'Reveal the model answer when you are done.',              labelClass: '' }
         : { label: 'Writing Response', detail: 'Capture your answer before revealing the model answer.', labelClass: '' };
     }
 
     return item.isAnswered
-      ? { label: 'Response Selected', detail: 'Review is locked only after you reveal the explanation.',         labelClass: '' }
+      ? { label: 'Answer Selected',   detail: 'Reveal to lock your answer and open the explanation.',               labelClass: '' }
       : { label: 'Awaiting Reveal',   detail: 'Select a response, then reveal to open the explanation panel.', labelClass: '' };
   }
 

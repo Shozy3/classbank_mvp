@@ -132,7 +132,7 @@ function renderChoices(item, question) {
   const isMulti = question.questionType === 'multi_select';
 
   const hintHtml = isMulti && !item.isRevealed
-    ? `<div class="multi-select-hint">Select all that apply. Reveal will show which correct answer was missed and why the result is partial.</div>`
+    ? `<div class="multi-select-hint">Select all that apply.</div>`
     : '';
 
   const choicesHtml = question.choices.map(choice =>

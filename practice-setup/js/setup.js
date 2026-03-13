@@ -20,7 +20,8 @@ import { COURSE_DATA } from '../../practice-session/js/data/course-data.js';
 // ---------------------------------------------------------------------------
 
 /** @type {{ course_id: string, course_name: string, course_code: string, units: any[] }} */
-const COURSE = COURSE_DATA.courses[0];
+let COURSE = COURSE_DATA.courses[0];
+let lastQuestionQueryResult = [];
 
 const ALL_TYPES = ['single_best', 'multi_select', 'true_false', 'short_answer'];
 const TYPE_LABELS = {
@@ -52,13 +53,14 @@ const SetupState = {
   shuffleChoices:   true,
   mode:             'free_practice',
   timerMode:        'none',
+  usingDb:          false,
 };
 
 // ---------------------------------------------------------------------------
 // Count computation
 // ---------------------------------------------------------------------------
 
-function getMatchingCount() {
+function getMatchingCountLocal() {
   let n = 0;
   for (const unit of COURSE.units) {
     if (!SetupState.unitIds.has(unit.unit_id)) continue;
@@ -77,11 +79,95 @@ function getMatchingCount() {
   return n;
 }
 
+function toFilterPayload() {
+  return {
+    topicIds: [...SetupState.topicIds],
+    questionTypes: [...SetupState.questionTypes],
+    difficulties: [...SetupState.difficulties],
+    bookmarkedOnly: SetupState.bookmarkedOnly,
+    flaggedOnly: SetupState.flaggedOnly,
+  };
+}
+
+async function queryMatchingQuestions(options = {}) {
+  if (!SetupState.usingDb || !window.api?.getQuestions) {
+    return null;
+  }
+
+  const payload = {
+    ...toFilterPayload(),
+    randomSample: Number.isInteger(options.randomSample) ? options.randomSample : null,
+  };
+
+  const rows = await window.api.getQuestions(payload);
+  if (!Array.isArray(rows)) {
+    throw new Error('db:getQuestions returned unexpected payload.');
+  }
+
+  return rows;
+}
+
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
-function initSetup() {
+async function loadCourseFromDb() {
+  if (!window.api?.getCourses || !window.api?.getUnits || !window.api?.getTopics) {
+    return null;
+  }
+
+  const courses = await window.api.getCourses();
+  if (!Array.isArray(courses) || courses.length === 0) {
+    return null;
+  }
+
+  const baseCourse = courses[0];
+  const course = {
+    course_id: baseCourse.course_id,
+    course_name: baseCourse.course_name,
+    course_code: baseCourse.course_code || 'Course',
+    units: [],
+  };
+
+  const units = await window.api.getUnits(course.course_id);
+  for (const unit of units) {
+    const topics = await window.api.getTopics(unit.unit_id);
+    course.units.push({
+      unit_id: unit.unit_id,
+      unit_name: unit.unit_name,
+      sort_order: unit.sort_order,
+      topics: topics.map((topic) => ({
+        topic_id: topic.topic_id,
+        topic_name: topic.topic_name,
+        sort_order: topic.sort_order,
+        questions: [],
+      })),
+    });
+  }
+
+  return course;
+}
+
+async function initSetup() {
+  try {
+    const dbCourse = await loadCourseFromDb();
+    if (dbCourse) {
+      COURSE = dbCourse;
+      SetupState.usingDb = true;
+    } else {
+      SetupState.usingDb = false;
+      COURSE = COURSE_DATA.courses[0];
+    }
+  } catch (error) {
+    console.error('[setup] Failed to load DB course hierarchy, using fallback fixture.', error);
+    SetupState.usingDb = false;
+    COURSE = COURSE_DATA.courses[0];
+  }
+
+  SetupState.courseId = COURSE.course_id;
+  SetupState.unitIds.clear();
+  SetupState.topicIds.clear();
+
   // Default: all units + topics selected
   for (const unit of COURSE.units) {
     SetupState.unitIds.add(unit.unit_id);
@@ -90,7 +176,20 @@ function initSetup() {
     }
   }
 
-  SetupState.maxCount       = getMatchingCount();
+  if (SetupState.usingDb) {
+    try {
+      lastQuestionQueryResult = await queryMatchingQuestions();
+      SetupState.maxCount = lastQuestionQueryResult.length;
+    } catch (error) {
+      console.error('[setup] Failed to query DB question count, switching to fixture count.', error);
+      SetupState.usingDb = false;
+      COURSE = COURSE_DATA.courses[0];
+      SetupState.maxCount = getMatchingCountLocal();
+    }
+  } else {
+    SetupState.maxCount = getMatchingCountLocal();
+  }
+
   SetupState.questionCount  = SetupState.maxCount;
   SetupState.requestedCount = SetupState.maxCount;
 }
@@ -604,7 +703,7 @@ function attachListeners() {
     const cb = e.target.closest('.unit-checkbox');
     if (!cb) return;
     applyUnitCascade(cb.dataset.unitId, cb.checked);
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Topic checkboxes
@@ -617,7 +716,7 @@ function attachListeners() {
     } else {
       SetupState.topicIds.delete(topicId);
     }
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Question type checkboxes
@@ -630,7 +729,7 @@ function attachListeners() {
     } else {
       SetupState.questionTypes.delete(type);
     }
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Question count input
@@ -665,21 +764,21 @@ function attachListeners() {
     } else {
       SetupState.difficulties.delete(d);
     }
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Bookmarked Only toggle
   document.getElementById('toggle-bookmarked')?.addEventListener('change', (e) => {
     SetupState.bookmarkedOnly = e.target.checked;
     e.target.setAttribute('aria-checked', String(e.target.checked));
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Flagged Only toggle
   document.getElementById('toggle-flagged')?.addEventListener('change', (e) => {
     SetupState.flaggedOnly = e.target.checked;
     e.target.setAttribute('aria-checked', String(e.target.checked));
-    recomputeCount();
+    void recomputeCount();
   });
 
   // Session mode radios
@@ -698,7 +797,7 @@ function attachListeners() {
 
   // Start Session button
   document.getElementById('btn-start-session')?.addEventListener('click', () => {
-    startSession();
+    void startSession();
   });
 }
 
@@ -706,8 +805,23 @@ function attachListeners() {
 // Count sync helper
 // ---------------------------------------------------------------------------
 
-function recomputeCount() {
-  const next = getMatchingCount();
+async function recomputeCount() {
+  let next = 0;
+
+  if (SetupState.usingDb) {
+    try {
+      lastQuestionQueryResult = await queryMatchingQuestions();
+      next = lastQuestionQueryResult.length;
+    } catch (error) {
+      console.error('[setup] Failed to recompute DB count. Falling back to fixture.', error);
+      SetupState.usingDb = false;
+      COURSE = COURSE_DATA.courses[0];
+      next = getMatchingCountLocal();
+    }
+  } else {
+    next = getMatchingCountLocal();
+  }
+
   SetupState.maxCount = next;
 
   // Clamp to available pool; restore toward requestedCount when pool expands.
@@ -733,11 +847,43 @@ function recomputeCount() {
 // Start session
 // ---------------------------------------------------------------------------
 
-function startSession() {
+function deriveTopicLabelFromSelection() {
+  const selected = [];
+  const all = [];
+
+  for (const unit of COURSE.units) {
+    const unitEnabled = SetupState.unitIds.has(unit.unit_id);
+    for (const topic of unit.topics) {
+      all.push(topic.topic_name);
+      if (unitEnabled && SetupState.topicIds.has(topic.topic_id)) {
+        selected.push(topic.topic_name);
+      }
+    }
+  }
+
+  if (selected.length === 0) return 'No Topics Selected';
+  if (selected.length === all.length) return 'All Topics';
+  if (selected.length === 1) return selected[0];
+  return selected.join(' · ');
+}
+
+async function startSession() {
   if (SetupState.maxCount === 0) return;
+
+  let preloadedQuestions = null;
+  if (SetupState.usingDb) {
+    try {
+      preloadedQuestions = await queryMatchingQuestions({ randomSample: SetupState.questionCount });
+    } catch (error) {
+      console.error('[setup] Failed to preload DB questions; session will fallback to fixture data.', error);
+    }
+  }
 
   const config = {
     courseId:         SetupState.courseId,
+    courseName:       COURSE.course_name,
+    courseCode:       COURSE.course_code,
+    topicLabel:       deriveTopicLabelFromSelection(),
     unitIds:          [...SetupState.unitIds],
     topicIds:         [...SetupState.topicIds],
     questionTypes:    [...SetupState.questionTypes],
@@ -749,6 +895,7 @@ function startSession() {
     shuffleChoices:   SetupState.shuffleChoices,
     mode:             SetupState.mode,
     timerMode:        SetupState.timerMode,
+    preloadedQuestions,
   };
 
   sessionStorage.setItem('classbank_session_config', JSON.stringify(config));
@@ -771,8 +918,8 @@ function escapeHtml(str) {
 // Bootstrap
 // ---------------------------------------------------------------------------
 
-document.addEventListener('DOMContentLoaded', () => {
-  initSetup();
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSetup();
   renderAll();
   updateSummary();
 });

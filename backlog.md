@@ -10,6 +10,8 @@
 ## Phase 1 — App shell and persistence
 **Priority: Must Have**
 
+- Electron main process with BrowserWindow
+- preload.js with contextBridge IPC API (`window.api`)
 - app shell with persistent navigation
 - section routes/views:
   - Library
@@ -18,9 +20,9 @@
   - Practice Session
   - Review History
   - Stats Dashboard
-- local database setup
-- schema initialization
-- data access layer
+- SQLite setup via `better-sqlite3`
+- schema initialization on first launch
+- data access layer (main process query functions)
 - basic backup/restore plumbing
 
 **Milestone outcome**

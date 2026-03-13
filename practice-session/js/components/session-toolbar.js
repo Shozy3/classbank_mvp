@@ -67,8 +67,8 @@ export function renderToolbar(containerEl, state) {
         class="btn btn-ghost"
         data-action="next"
         ${isLast ? 'disabled' : ''}
-        title="Next question (→)"
-      >Next →</button>
+        title="${isLast ? 'You have reached the last question' : 'Next question (→)'}"
+      >${isLast && isRevealed ? 'End of Session' : 'Next →'}</button>
 
       <button
         class="btn btn-ghost"

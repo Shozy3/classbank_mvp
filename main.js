@@ -1,7 +1,26 @@
 const path = require('path');
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const {
+  initializeDatabase,
+  closeDatabase,
+  getCourses,
+  getUnits,
+  getTopics,
+  getQuestions,
+} = require('./db');
 
 let mainWindow;
+
+function withDbHandler(label, fn) {
+  return async (_event, payload) => {
+    try {
+      return fn(payload);
+    } catch (error) {
+      console.error(`[db] ${label} failed:`, error);
+      throw error;
+    }
+  };
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -45,6 +64,12 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  initializeDatabase({
+    userDataPath: app.getPath('userData'),
+    schemaPath: path.join(__dirname, 'schema.sql'),
+    fixturePath: path.join(__dirname, 'fixtures', 'sample-course-data.json'),
+  });
+
   createMainWindow();
 
   app.on('activate', () => {
@@ -60,25 +85,21 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('before-quit', () => {
+  closeDatabase();
+});
+
 ipcMain.handle('app:getVersion', () => {
   return app.getVersion();
 });
 
-ipcMain.handle('db:getCourses', async () => {
-  return [];
-});
+ipcMain.handle('db:getCourses', withDbHandler('getCourses', () => getCourses()));
 
-ipcMain.handle('db:getUnits', async (_event, _courseId) => {
-  return [];
-});
+ipcMain.handle('db:getUnits', withDbHandler('getUnits', (courseId) => getUnits(courseId)));
 
-ipcMain.handle('db:getTopics', async (_event, _unitId) => {
-  return [];
-});
+ipcMain.handle('db:getTopics', withDbHandler('getTopics', (unitId) => getTopics(unitId)));
 
-ipcMain.handle('db:getQuestions', async (_event, _filters) => {
-  return [];
-});
+ipcMain.handle('db:getQuestions', withDbHandler('getQuestions', (filters) => getQuestions(filters)));
 
 ipcMain.handle('db:saveSession', async (_event, _payload) => {
   return { ok: true, message: 'Stub only: implemented in Issue #3.' };

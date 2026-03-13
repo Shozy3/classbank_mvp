@@ -7,9 +7,10 @@ A local, offline, single-user study application for creating and practicing cust
 ## In Scope
 
 ### Platform
-- macOS desktop application
+- macOS desktop application (Electron)
 - fully offline
-- local embedded database
+- SQLite via `better-sqlite3` in the Electron main process
+- renderer ↔ main communication via `contextBridge` IPC (`window.api`)
 - single-user only
 
 ### Content structure

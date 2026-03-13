@@ -293,11 +293,72 @@ function deriveTopicLabel(course, unitIdSet, topicIdSet) {
   return selectedTopicNames.join(' · ');
 }
 
+function mapQuestionToSessionShape(raw, shuffleChoices) {
+  const isCamel = typeof raw.questionId === 'string';
+  const questionId = isCamel ? raw.questionId : raw.question_id;
+  const questionType = isCamel ? raw.questionType : raw.question_type;
+
+  let choices = (isCamel ? raw.choices : (raw.choices || [])).map((choice) => ({
+    choiceId:        choice.choiceId ?? choice.choice_id,
+    label:           choice.label,
+    html:            choice.html ?? choice.choice_rich_text,
+    isCorrect:       choice.isCorrect ?? Boolean(choice.is_correct),
+    explanationHtml: choice.explanationHtml ?? choice.choice_explanation_rich_text ?? '',
+  }));
+
+  if (shuffleChoices) {
+    choices = fisherYates(choices);
+  }
+
+  return {
+    questionId,
+    questionType,
+    stem:                raw.stem ?? raw.stem_rich_text,
+    choices,
+    mainExplanationHtml: raw.mainExplanationHtml ?? raw.main_explanation_rich_text ?? '',
+    referenceText:       raw.referenceText ?? raw.reference_text ?? '',
+    modelAnswerHtml:     raw.modelAnswerHtml ?? raw.model_answer_rich_text ?? null,
+  };
+}
+
 /**
  * Build a SESSION_DATA object from a validated config.
  * Returns null if the course is not found or yields 0 questions.
  */
 function buildFromConfig(config) {
+  if (Array.isArray(config.preloadedQuestions) && config.preloadedQuestions.length > 0) {
+    let preloaded = config.preloadedQuestions;
+
+    if (config.shuffleQuestions) {
+      preloaded = fisherYates(preloaded);
+    }
+
+    if (config.questionCount != null && config.questionCount < 1) {
+      return null;
+    }
+
+    const count = Math.min(config.questionCount ?? preloaded.length, preloaded.length);
+    const sliced = preloaded.slice(0, count);
+    const questions = sliced.map((q) => mapQuestionToSessionShape(q, Boolean(config.shuffleChoices)));
+
+    const initialOverrides = {};
+    for (const q of questions) {
+      initialOverrides[q.questionId] = {};
+    }
+
+    const courseCode = config.courseCode || 'Course';
+    const courseName = config.courseName || 'Practice Session';
+
+    return {
+      sessionId: `session-${Date.now()}`,
+      courseLabel: `${courseCode} — ${courseName}`,
+      topicLabel: config.topicLabel || 'Selected Topics',
+      modeLabel: 'Free Practice',
+      questions,
+      initialOverrides,
+    };
+  }
+
   const course = COURSE_DATA.courses.find(c => c.course_id === config.courseId);
   if (!course) return null;
 
@@ -332,34 +393,13 @@ function buildFromConfig(config) {
     collected = fisherYates(collected);
   }
 
-  // Clamp questionCount to available pool
-  const count = Math.min(Math.max(1, config.questionCount || collected.length), collected.length);
+  // Clamp questionCount to available pool; explicit 0 or negative is an invalid config
+  if (config.questionCount != null && config.questionCount < 1) return null;
+  const count = Math.min(config.questionCount ?? collected.length, collected.length);
   collected = collected.slice(0, count);
 
   // Map snake_case fixture fields → camelCase session format
-  const questions = collected.map(q => {
-    let choices = (q.choices || []).map(c => ({
-      choiceId:        c.choice_id,
-      label:           c.label,
-      html:            c.choice_rich_text,
-      isCorrect:       c.is_correct,
-      explanationHtml: c.choice_explanation_rich_text || '',
-    }));
-
-    if (config.shuffleChoices) {
-      choices = fisherYates(choices);
-    }
-
-    return {
-      questionId:          q.question_id,
-      questionType:        q.question_type,
-      stem:                q.stem_rich_text,
-      choices,
-      mainExplanationHtml: q.main_explanation_rich_text || '',
-      referenceText:       q.reference_text || '',
-      modelAnswerHtml:     q.model_answer_rich_text || null,
-    };
-  });
+  const questions = collected.map((q) => mapQuestionToSessionShape(q, Boolean(config.shuffleChoices)));
 
   // Build empty initialOverrides (no pre-seeded demo states)
   const initialOverrides = {};
