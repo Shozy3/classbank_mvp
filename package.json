@@ -1,0 +1,26 @@
+{
+  "name": "classbank-mvp",
+  "version": "0.1.0",
+  "description": "Local-first offline study app MVP",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder --mac"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.classbank.mvp",
+    "productName": "ClassBank",
+    "mac": {
+      "category": "public.app-category.education"
+    }
+  }
+}
