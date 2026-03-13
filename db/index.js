@@ -25,6 +25,158 @@ function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function normalizeOperation(value) {
+  return value === 'finalizeSession' ? 'finalizeSession' : 'saveProgress';
+}
+
+function normalizeSessionType(value) {
+  const allowed = new Set(['free_practice', 'timed_block', 'review_incorrect', 'spaced_review']);
+  if (!allowed.has(value)) {
+    throw new Error(`Invalid session_type: ${value}`);
+  }
+  return value;
+}
+
+function normalizeTimerMode(value) {
+  const allowed = new Set(['none', 'per_block', 'per_question', 'both']);
+  if (!allowed.has(value)) {
+    throw new Error(`Invalid timer_mode: ${value}`);
+  }
+  return value;
+}
+
+function normalizeSelfRating(value) {
+  if (value == null) return null;
+  const allowed = new Set(['Again', 'Hard', 'Good', 'Easy']);
+  if (!allowed.has(value)) {
+    throw new Error(`Invalid self_rating: ${value}`);
+  }
+  return value;
+}
+
+function normalizeBoolean(value) {
+  return value ? 1 : 0;
+}
+
+function normalizeInteger(value, fallback = null) {
+  if (value == null) return fallback;
+  const next = Number(value);
+  if (!Number.isFinite(next)) return fallback;
+  const rounded = Math.floor(next);
+  return rounded < 0 ? 0 : rounded;
+}
+
+function normalizePartialCredit(value, result) {
+  if (value == null) {
+    if (result === 'correct') return 1;
+    if (result === 'partial') return 0.5;
+    if (result === 'incorrect') return 0;
+    return null;
+  }
+
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0 || num > 1) {
+    throw new Error(`partial_credit must be between 0 and 1. Received: ${value}`);
+  }
+  return num;
+}
+
+function normalizeIsCorrect(value, result) {
+  if (value == null) {
+    if (result === 'correct') return 1;
+    if (result === 'partial' || result === 'incorrect') return 0;
+    return null;
+  }
+  return value ? 1 : 0;
+}
+
+function normalizeSessionPayload(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const session = source.session && typeof source.session === 'object' ? source.session : {};
+  const items = Array.isArray(source.items) ? source.items : [];
+  const operation = normalizeOperation(source.operation);
+
+  if (!session.sessionId || typeof session.sessionId !== 'string') {
+    throw new Error('session.sessionId is required.');
+  }
+
+  const normalizedSession = {
+    sessionId: session.sessionId,
+    sessionType: normalizeSessionType(session.sessionType || 'free_practice'),
+    timerMode: normalizeTimerMode(session.timerMode || 'none'),
+    totalTimeSeconds: normalizeInteger(session.totalTimeSeconds),
+    shuffleQuestions: normalizeBoolean(session.shuffleQuestions ?? true),
+    shuffleChoices: normalizeBoolean(session.shuffleChoices ?? true),
+    randomSampleSize: normalizeInteger(session.randomSampleSize),
+    filterPayloadJson: JSON.stringify(session.filterPayload ?? {}),
+    createdAt: typeof session.createdAt === 'string' ? session.createdAt : nowIso(),
+    startedAt: typeof session.startedAt === 'string' ? session.startedAt : nowIso(),
+    completedAt: typeof session.completedAt === 'string' ? session.completedAt : null,
+  };
+
+  const normalizedItems = items.map((item, idx) => {
+    const next = item && typeof item === 'object' ? item : {};
+    const contentType = next.contentType === 'flashcard' ? 'flashcard' : 'question';
+    const presentedOrder = Number.isInteger(next.presentedOrder)
+      ? next.presentedOrder
+      : Number.isInteger(next.order)
+        ? next.order
+        : idx;
+
+    const questionId = contentType === 'question' ? String(next.questionId || '') : null;
+    const flashcardId = contentType === 'flashcard' ? String(next.flashcardId || '') : null;
+
+    if (contentType === 'question' && !questionId) {
+      throw new Error(`items[${idx}] requires questionId for question content.`);
+    }
+
+    if (contentType === 'flashcard' && !flashcardId) {
+      throw new Error(`items[${idx}] requires flashcardId for flashcard content.`);
+    }
+
+    const result = next.result ?? null;
+    const normalizedResult = result === 'correct' || result === 'partial' || result === 'incorrect'
+      ? result
+      : null;
+
+    const itemId = typeof next.sessionItemId === 'string' && next.sessionItemId.length > 0
+      ? next.sessionItemId
+      : `${normalizedSession.sessionId}::${contentType}::${presentedOrder}`;
+
+    return {
+      sessionItemId: itemId,
+      contentType,
+      questionId,
+      flashcardId,
+      presentedOrder,
+      wasAnswered: normalizeBoolean(next.wasAnswered),
+      submittedAt: typeof next.submittedAt === 'string' ? next.submittedAt : null,
+      timeSpentSeconds: normalizeInteger(next.timeSpentSeconds, 0),
+      responsePayloadJson: JSON.stringify(next.responsePayload ?? {}),
+      isCorrect: normalizeIsCorrect(next.isCorrect, normalizedResult),
+      partialCredit: normalizePartialCredit(next.partialCredit, normalizedResult),
+      wasRevealed: normalizeBoolean(next.wasRevealed),
+      wasSkipped: normalizeBoolean(next.wasSkipped),
+      wasBookmarkedDuringSession: normalizeBoolean(next.wasBookmarkedDuringSession),
+      wasFlaggedDuringSession: normalizeBoolean(next.wasFlaggedDuringSession),
+      selfRating: normalizeSelfRating(next.selfRating ?? null),
+      createdAt: typeof next.createdAt === 'string' ? next.createdAt : nowIso(),
+      result: normalizedResult,
+    };
+  });
+
+  return {
+    operation,
+    session: normalizedSession,
+    items: normalizedItems,
+    updateAggregates: Boolean(source.updateAggregates),
+  };
+}
+
 function ensureDbOpen() {
   if (!db) {
     throw new Error('Database is not initialized.');
@@ -299,6 +451,8 @@ function normalizeFilters(input) {
       : [],
     bookmarkedOnly: Boolean(filters.bookmarkedOnly),
     flaggedOnly: Boolean(filters.flaggedOnly),
+    incorrectOnly: Boolean(filters.incorrectOnly),
+    unseenOnly: Boolean(filters.unseenOnly),
     randomSample: Number.isInteger(filters.randomSample) && filters.randomSample > 0
       ? filters.randomSample
       : null,
@@ -330,6 +484,30 @@ function buildQuestionRowsQuery(filters) {
 
   if (filters.flaggedOnly) {
     where.push('q.is_flagged = 1');
+  }
+
+  if (filters.incorrectOnly) {
+    where.push(`EXISTS (
+      SELECT 1
+      FROM practice_session_items psi
+      WHERE psi.content_type = 'question'
+        AND psi.question_id = q.id
+        AND psi.was_revealed = 1
+        AND (
+          psi.is_correct = 0
+          OR (psi.partial_credit IS NOT NULL AND psi.partial_credit < 1)
+        )
+    )`);
+  }
+
+  if (filters.unseenOnly) {
+    where.push(`NOT EXISTS (
+      SELECT 1
+      FROM practice_session_items psi
+      WHERE psi.content_type = 'question'
+        AND psi.question_id = q.id
+        AND psi.was_revealed = 1
+    )`);
   }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -427,6 +605,161 @@ function getQuestions(inputFilters) {
   }));
 }
 
+function saveSession(payload) {
+  const conn = ensureDbOpen();
+  const normalized = normalizeSessionPayload(payload);
+
+  const upsertSessionStmt = conn.prepare(`
+    INSERT INTO practice_sessions (
+      id, session_type, timer_mode, total_time_seconds,
+      shuffle_questions, shuffle_choices, random_sample_size,
+      filter_payload_json, created_at, started_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      session_type = excluded.session_type,
+      timer_mode = excluded.timer_mode,
+      total_time_seconds = excluded.total_time_seconds,
+      shuffle_questions = excluded.shuffle_questions,
+      shuffle_choices = excluded.shuffle_choices,
+      random_sample_size = excluded.random_sample_size,
+      filter_payload_json = excluded.filter_payload_json,
+      started_at = COALESCE(practice_sessions.started_at, excluded.started_at),
+      completed_at = COALESCE(excluded.completed_at, practice_sessions.completed_at)
+  `);
+
+  const upsertItemStmt = conn.prepare(`
+    INSERT INTO practice_session_items (
+      id, session_id, content_type, question_id, flashcard_id,
+      presented_order, was_answered, submitted_at, time_spent_seconds,
+      response_payload_json, is_correct, partial_credit, was_revealed,
+      was_skipped, was_bookmarked_during_session, was_flagged_during_session,
+      self_rating, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      was_answered = excluded.was_answered,
+      submitted_at = excluded.submitted_at,
+      time_spent_seconds = excluded.time_spent_seconds,
+      response_payload_json = excluded.response_payload_json,
+      is_correct = excluded.is_correct,
+      partial_credit = excluded.partial_credit,
+      was_revealed = excluded.was_revealed,
+      was_skipped = excluded.was_skipped,
+      was_bookmarked_during_session = excluded.was_bookmarked_during_session,
+      was_flagged_during_session = excluded.was_flagged_during_session,
+      self_rating = excluded.self_rating
+  `);
+
+  const updateAggregatesStmt = conn.prepare(`
+    UPDATE questions
+    SET
+      times_seen = times_seen + 1,
+      times_correct = times_correct + CASE
+        WHEN psi.is_correct = 1 THEN 1
+        ELSE 0
+      END,
+      times_incorrect = times_incorrect + CASE
+        WHEN psi.is_correct = 0 AND (psi.partial_credit IS NULL OR psi.partial_credit = 0) THEN 1
+        ELSE 0
+      END,
+      last_result = CASE
+        WHEN psi.is_correct = 1 THEN 'correct'
+        WHEN psi.partial_credit > 0 AND psi.partial_credit < 1 THEN 'partial'
+        WHEN psi.was_answered = 0 THEN 'unanswered'
+        ELSE 'incorrect'
+      END,
+      last_used_at = COALESCE(psi.submitted_at, ?)
+    FROM practice_session_items psi
+    WHERE psi.session_id = ?
+      AND psi.content_type = 'question'
+      AND psi.question_id = questions.id
+      AND psi.was_revealed = 1
+  `);
+
+  const txn = conn.transaction(() => {
+    upsertSessionStmt.run(
+      normalized.session.sessionId,
+      normalized.session.sessionType,
+      normalized.session.timerMode,
+      normalized.session.totalTimeSeconds,
+      normalized.session.shuffleQuestions,
+      normalized.session.shuffleChoices,
+      normalized.session.randomSampleSize,
+      normalized.session.filterPayloadJson,
+      normalized.session.createdAt,
+      normalized.session.startedAt,
+      normalized.operation === 'finalizeSession'
+        ? (normalized.session.completedAt || nowIso())
+        : normalized.session.completedAt
+    );
+
+    for (const item of normalized.items) {
+      upsertItemStmt.run(
+        item.sessionItemId,
+        normalized.session.sessionId,
+        item.contentType,
+        item.questionId,
+        item.flashcardId,
+        item.presentedOrder,
+        item.wasAnswered,
+        item.submittedAt,
+        item.timeSpentSeconds,
+        item.responsePayloadJson,
+        item.isCorrect,
+        item.partialCredit,
+        item.wasRevealed,
+        item.wasSkipped,
+        item.wasBookmarkedDuringSession,
+        item.wasFlaggedDuringSession,
+        item.selfRating,
+        item.createdAt
+      );
+    }
+
+    if (normalized.operation === 'finalizeSession' && normalized.updateAggregates) {
+      updateAggregatesStmt.run(nowIso(), normalized.session.sessionId);
+    }
+  });
+
+  txn();
+
+  return {
+    ok: true,
+    operation: normalized.operation,
+    sessionId: normalized.session.sessionId,
+    itemCount: normalized.items.length,
+    aggregatesUpdated: normalized.operation === 'finalizeSession' && normalized.updateAggregates,
+  };
+}
+
+function getQuestionReviewStats(questionId) {
+  if (!questionId || typeof questionId !== 'string') {
+    throw new Error('questionId is required for db:getQuestionReviewStats.');
+  }
+
+  const conn = ensureDbOpen();
+  const row = conn.prepare(`
+    SELECT
+      COUNT(*) AS seen_count,
+      SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct_count,
+      SUM(CASE WHEN is_correct = 0 AND (partial_credit IS NULL OR partial_credit = 0) THEN 1 ELSE 0 END) AS incorrect_count,
+      SUM(CASE WHEN partial_credit > 0 AND partial_credit < 1 THEN 1 ELSE 0 END) AS partial_count,
+      MAX(COALESCE(submitted_at, created_at)) AS last_reviewed_at
+    FROM practice_session_items
+    WHERE content_type = 'question'
+      AND question_id = ?
+      AND was_revealed = 1
+  `).get(questionId);
+
+  return {
+    questionId,
+    seenCount: Number(row?.seen_count ?? 0),
+    correctCount: Number(row?.correct_count ?? 0),
+    incorrectCount: Number(row?.incorrect_count ?? 0),
+    partialCount: Number(row?.partial_count ?? 0),
+    lastReviewedAt: row?.last_reviewed_at || null,
+  };
+}
+
 module.exports = {
   initializeDatabase,
   closeDatabase,
@@ -434,4 +767,6 @@ module.exports = {
   getUnits,
   getTopics,
   getQuestions,
+  getQuestionReviewStats,
+  saveSession,
 };

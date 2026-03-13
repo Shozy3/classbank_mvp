@@ -46,6 +46,8 @@ const SetupState = {
   difficulties:     new Set([1, 2, 3]),
   bookmarkedOnly:   false,
   flaggedOnly:      false,
+  incorrectOnly:    false,
+  unseenOnly:       false,
   questionCount:    0,           // clamped effective count (≤ maxCount)
   requestedCount:   0,           // last count explicitly typed by user
   maxCount:         0,           // total questions that pass current filters
@@ -61,6 +63,7 @@ const SetupState = {
 // ---------------------------------------------------------------------------
 
 function getMatchingCountLocal() {
+  const reviewHistory = readLocalReviewHistory();
   let n = 0;
   for (const unit of COURSE.units) {
     if (!SetupState.unitIds.has(unit.unit_id)) continue;
@@ -72,6 +75,14 @@ function getMatchingCountLocal() {
         if (!SetupState.difficulties.has(diff)) continue;
         if (SetupState.bookmarkedOnly && !q.is_bookmarked) continue;
         if (SetupState.flaggedOnly    && !q.is_flagged)    continue;
+
+        const questionId = q.question_id;
+        const wasSeen = reviewHistory.seenIds.has(questionId);
+        const wasIncorrect = reviewHistory.incorrectIds.has(questionId);
+
+        if (SetupState.incorrectOnly && !wasIncorrect) continue;
+        if (SetupState.unseenOnly && wasSeen) continue;
+
         n++;
       }
     }
@@ -86,7 +97,26 @@ function toFilterPayload() {
     difficulties: [...SetupState.difficulties],
     bookmarkedOnly: SetupState.bookmarkedOnly,
     flaggedOnly: SetupState.flaggedOnly,
+    incorrectOnly: SetupState.incorrectOnly,
+    unseenOnly: SetupState.unseenOnly,
   };
+}
+
+function readLocalReviewHistory() {
+  try {
+    const seenRaw = localStorage.getItem('classbank_seen_question_ids');
+    const incorrectRaw = localStorage.getItem('classbank_incorrect_question_ids');
+    const seenParsed = JSON.parse(seenRaw || '[]');
+    const incorrectParsed = JSON.parse(incorrectRaw || '[]');
+    const seen = Array.isArray(seenParsed) ? seenParsed : [];
+    const incorrect = Array.isArray(incorrectParsed) ? incorrectParsed : [];
+    return {
+      seenIds: new Set(seen.filter((id) => typeof id === 'string')),
+      incorrectIds: new Set(incorrect.filter((id) => typeof id === 'string')),
+    };
+  } catch {
+    return { seenIds: new Set(), incorrectIds: new Set() };
+  }
 }
 
 async function queryMatchingQuestions(options = {}) {
@@ -433,24 +463,38 @@ function renderMetaFiltersSection() {
           </label>
         </div>
 
-        <div class="toggle-row is-disabled">
+        <div class="toggle-row">
           <div class="toggle-label-group">
             <span class="toggle-label">Incorrect Only</span>
-            <span class="toggle-helper-text">Requires review history</span>
+            <span class="toggle-helper-text">Uses saved review history</span>
           </div>
-          <label class="toggle-switch" aria-label="Incorrect only (unavailable)">
-            <input type="checkbox" class="toggle-input" disabled role="switch" aria-checked="false">
+          <label class="toggle-switch" aria-label="Incorrect only">
+            <input
+              type="checkbox"
+              id="toggle-incorrect"
+              class="toggle-input"
+              ${SetupState.incorrectOnly ? 'checked' : ''}
+              role="switch"
+              aria-checked="${SetupState.incorrectOnly}"
+            >
             <span class="toggle-track"></span>
           </label>
         </div>
 
-        <div class="toggle-row is-disabled">
+        <div class="toggle-row">
           <div class="toggle-label-group">
             <span class="toggle-label">Unseen Only</span>
-            <span class="toggle-helper-text">Requires seen-state tracking</span>
+            <span class="toggle-helper-text">Uses saved reveal history</span>
           </div>
-          <label class="toggle-switch" aria-label="Unseen only (unavailable)">
-            <input type="checkbox" class="toggle-input" disabled role="switch" aria-checked="false">
+          <label class="toggle-switch" aria-label="Unseen only">
+            <input
+              type="checkbox"
+              id="toggle-unseen"
+              class="toggle-input"
+              ${SetupState.unseenOnly ? 'checked' : ''}
+              role="switch"
+              aria-checked="${SetupState.unseenOnly}"
+            >
             <span class="toggle-track"></span>
           </label>
         </div>
@@ -464,7 +508,7 @@ function renderModeSection() {
   const modes = [
     { id: 'free_practice',    icon: '▷', label: 'Free Practice',   helper: null,                                     enabled: true  },
     { id: 'timed_block',      icon: '⏱', label: 'Timed Block',     helper: 'Available once timer system is added.',  enabled: false },
-    { id: 'review_incorrect', icon: '↩', label: 'Review Incorrect', helper: 'Requires review history data.',          enabled: false },
+    { id: 'review_incorrect', icon: '↩', label: 'Review Incorrect', helper: 'Filters to previously missed items.',     enabled: true  },
     { id: 'spaced_review',    icon: '◈', label: 'Spaced Review',    helper: 'Requires spaced-repetition data.',       enabled: false },
   ];
 
@@ -781,11 +825,61 @@ function attachListeners() {
     void recomputeCount();
   });
 
+  // Incorrect Only toggle
+  document.getElementById('toggle-incorrect')?.addEventListener('change', (e) => {
+    SetupState.incorrectOnly = e.target.checked;
+    e.target.setAttribute('aria-checked', String(e.target.checked));
+    if (SetupState.incorrectOnly) {
+      SetupState.unseenOnly = false;
+      const unseenToggle = document.getElementById('toggle-unseen');
+      if (unseenToggle) {
+        unseenToggle.checked = false;
+        unseenToggle.setAttribute('aria-checked', 'false');
+      }
+    }
+    void recomputeCount();
+  });
+
+  // Unseen Only toggle
+  document.getElementById('toggle-unseen')?.addEventListener('change', (e) => {
+    SetupState.unseenOnly = e.target.checked;
+    e.target.setAttribute('aria-checked', String(e.target.checked));
+    if (SetupState.unseenOnly) {
+      SetupState.incorrectOnly = false;
+      if (SetupState.mode === 'review_incorrect') {
+        SetupState.mode = 'free_practice';
+        const freeRadio = document.getElementById('mode-free_practice');
+        if (freeRadio) freeRadio.checked = true;
+      }
+      const incorrectToggle = document.getElementById('toggle-incorrect');
+      if (incorrectToggle) {
+        incorrectToggle.checked = false;
+        incorrectToggle.setAttribute('aria-checked', 'false');
+      }
+    }
+    void recomputeCount();
+  });
+
   // Session mode radios
   document.getElementById('mode-radios')?.addEventListener('change', (e) => {
     const rb = e.target.closest('.mode-radio');
     if (!rb) return;
     SetupState.mode = rb.value;
+    if (SetupState.mode === 'review_incorrect') {
+      SetupState.incorrectOnly = true;
+      SetupState.unseenOnly = false;
+      const incorrectToggle = document.getElementById('toggle-incorrect');
+      if (incorrectToggle) {
+        incorrectToggle.checked = true;
+        incorrectToggle.setAttribute('aria-checked', 'true');
+      }
+      const unseenToggle = document.getElementById('toggle-unseen');
+      if (unseenToggle) {
+        unseenToggle.checked = false;
+        unseenToggle.setAttribute('aria-checked', 'false');
+      }
+      void recomputeCount();
+    }
   });
 
   // Timer mode radios
@@ -890,6 +984,8 @@ async function startSession() {
     difficulties:     [...SetupState.difficulties],
     bookmarkedOnly:   SetupState.bookmarkedOnly,
     flaggedOnly:      SetupState.flaggedOnly,
+    incorrectOnly:    SetupState.incorrectOnly,
+    unseenOnly:       SetupState.unseenOnly,
     questionCount:    SetupState.questionCount,
     shuffleQuestions: SetupState.shuffleQuestions,
     shuffleChoices:   SetupState.shuffleChoices,

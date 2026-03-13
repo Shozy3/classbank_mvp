@@ -7,6 +7,8 @@ const {
   getUnits,
   getTopics,
   getQuestions,
+  getQuestionReviewStats,
+  saveSession,
 } = require('./db');
 
 let mainWindow;
@@ -101,6 +103,6 @@ ipcMain.handle('db:getTopics', withDbHandler('getTopics', (unitId) => getTopics(
 
 ipcMain.handle('db:getQuestions', withDbHandler('getQuestions', (filters) => getQuestions(filters)));
 
-ipcMain.handle('db:saveSession', async (_event, _payload) => {
-  return { ok: true, message: 'Stub only: implemented in Issue #3.' };
-});
+ipcMain.handle('db:getQuestionReviewStats', withDbHandler('getQuestionReviewStats', (questionId) => getQuestionReviewStats(questionId)));
+
+ipcMain.handle('db:saveSession', withDbHandler('saveSession', (payload) => saveSession(payload)));

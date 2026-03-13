@@ -32,6 +32,13 @@ function makeItemState(question, overrides = {}) {
 
     // Result — only meaningful when isRevealed is true
     result: null,   // null | 'correct' | 'partial' | 'incorrect'
+    partialCredit: null,
+    selfRating: null,
+
+    // Timing fields used for session persistence
+    enteredAtEpochMs: null,
+    accumulatedTimeSeconds: 0,
+    submittedAt: null,
 
     // Item metadata
     isBookmarked: false,
@@ -68,6 +75,7 @@ export function initState() {
   // Mark Q1 as visited on load
   if (SessionState.items.length > 0) {
     SessionState.items[0].hasBeenVisited = true;
+    markItemEntered(SessionState.items[0]);
   }
 }
 
@@ -92,6 +100,19 @@ export function getNavStatus(item) {
 // ---------------------------------------------------------------------------
 function currentItem() {
   return SessionState.items[SessionState.currentIndex];
+}
+
+function markItemEntered(item) {
+  item.enteredAtEpochMs = Date.now();
+}
+
+function commitElapsedForItem(item) {
+  if (!item || item.enteredAtEpochMs == null) return;
+  const elapsedMs = Date.now() - item.enteredAtEpochMs;
+  if (elapsedMs > 0) {
+    item.accumulatedTimeSeconds += Math.floor(elapsedMs / 1000);
+  }
+  item.enteredAtEpochMs = Date.now();
 }
 
 function getQuestion(itemIdx) {
@@ -130,6 +151,29 @@ function computeResult(item, question) {
   if (type === 'short_answer') {
     // No auto-grade; reveal model answer only
     return null;
+  }
+
+  return null;
+}
+
+function computePartialCredit(item, question) {
+  const type = question.questionType;
+
+  if (type === 'multi_select') {
+    const correctIds = question.choices.filter((c) => c.isCorrect).map((c) => c.choiceId);
+    const selected = item.selectedChoiceIds;
+    if (selected.length === 0) return 0;
+
+    const falsePositives = selected.filter((id) => !correctIds.includes(id));
+    if (falsePositives.length > 0) return 0;
+
+    const truePositives = selected.filter((id) => correctIds.includes(id));
+    if (truePositives.length === correctIds.length) return 1;
+    return 0.5;
+  }
+
+  if (type === 'single_best' || type === 'true_false') {
+    return item.result === 'correct' ? 1 : 0;
   }
 
   return null;
@@ -239,6 +283,9 @@ export function reveal() {
   item.hasBeenVisited = true;
   item.isSkipped     = false;
   item.result        = computeResult(item, question);
+  item.partialCredit = computePartialCredit(item, question);
+  item.submittedAt = new Date().toISOString();
+  commitElapsedForItem(item);
 
   // If they hadn't answered, mark as answered-via-reveal for nav display
   if (!item.isAnswered && question.questionType !== 'short_answer') {
@@ -252,8 +299,16 @@ export function reveal() {
  */
 export function goTo(idx) {
   if (idx < 0 || idx >= SessionState.items.length) return;
+
+  const previous = SessionState.items[SessionState.currentIndex];
+  if (previous) {
+    commitElapsedForItem(previous);
+  }
+
   SessionState.currentIndex = idx;
-  SessionState.items[idx].hasBeenVisited = true;
+  const next = SessionState.items[idx];
+  next.hasBeenVisited = true;
+  markItemEntered(next);
 }
 
 /**
@@ -268,4 +323,8 @@ export function goPrev() {
  */
 export function goNext() {
   goTo(SessionState.currentIndex + 1);
+}
+
+export function setSelfRating(itemIdx, rating) {
+  SessionState.items[itemIdx].selfRating = rating;
 }

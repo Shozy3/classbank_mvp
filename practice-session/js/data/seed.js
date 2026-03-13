@@ -321,6 +321,21 @@ function mapQuestionToSessionShape(raw, shuffleChoices) {
   };
 }
 
+function readLocalReviewHistory() {
+  try {
+    const seenRaw = localStorage.getItem('classbank_seen_question_ids');
+    const incorrectRaw = localStorage.getItem('classbank_incorrect_question_ids');
+    const seen = JSON.parse(seenRaw || '[]');
+    const incorrect = JSON.parse(incorrectRaw || '[]');
+    return {
+      seenIds: new Set(Array.isArray(seen) ? seen : []),
+      incorrectIds: new Set(Array.isArray(incorrect) ? incorrect : []),
+    };
+  } catch {
+    return { seenIds: new Set(), incorrectIds: new Set() };
+  }
+}
+
 /**
  * Build a SESSION_DATA object from a validated config.
  * Returns null if the course is not found or yields 0 questions.
@@ -366,6 +381,7 @@ function buildFromConfig(config) {
   const topicIdSet = config.topicIds       ? new Set(config.topicIds)       : null;
   const typeSet    = config.questionTypes  ? new Set(config.questionTypes)  : null;
   const diffSet    = config.difficulties   ? new Set(config.difficulties)   : null;
+  const reviewHistory = readLocalReviewHistory();
 
   // Collect matching questions
   let collected = [];
@@ -381,6 +397,8 @@ function buildFromConfig(config) {
         }
         if (config.bookmarkedOnly && !q.is_bookmarked) continue;
         if (config.flaggedOnly    && !q.is_flagged)    continue;
+        if (config.incorrectOnly && !reviewHistory.incorrectIds.has(q.question_id)) continue;
+        if (config.unseenOnly && reviewHistory.seenIds.has(q.question_id)) continue;
         collected.push(q);
       }
     }

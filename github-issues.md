@@ -31,15 +31,25 @@ Closed: 0
 - Implemented locally: SQLite persistence layer wired through Electron main process IPC.
 - Scope completed: schema bootstrap, first-run seed path, read IPC handlers, renderer integration for setup/session loading.
 
+### Issue #3 Status
+- Implemented locally (in progress): Session write-back persistence wired end-to-end.
+- Scope completed so far:
+	- `db:saveSession` IPC now writes to `practice_sessions` + `practice_session_items`.
+	- Incremental session progress writes from Practice Session interactions.
+	- Finalize write updates question aggregate fields (`times_seen`, `times_correct`, `times_incorrect`, `last_result`, `last_used_at`).
+	- Incorrect-only and unseen-only filters added to DB query path.
+	- Review Incorrect mode enabled in Practice Setup with persisted-history filtering.
+	- Local-history fallback enabled for static browser acceptance runner (non-Electron path).
+
 ### Acceptance + Interactive Test Sweep
 
 Source: `temp/at-report.json`
 
 | Status | Count |
 |---|---:|
-| Pass | 7 |
+| Pass | 8 |
 | Fail | 0 |
-| Blocked | 9 |
+| Blocked | 8 |
 | Total | 16 |
 
 Passed IDs:
@@ -48,6 +58,7 @@ Passed IDs:
 - AT-008
 - AT-009
 - AT-010
+- AT-011
 - AT-015
 - SMOKE-UI-ERRORS
 
@@ -57,7 +68,6 @@ Blocked IDs and reasons:
 - AT-004: Spaced review engine and short-answer SR rating persistence not implemented.
 - AT-005: Flashcard authoring and spaced review scheduling not implemented.
 - AT-007: Timed block mode is disabled in Practice Setup.
-- AT-011: Incorrect-only flow depends on persisted review history not implemented yet.
 - AT-012: Edit reviewed flashcard reset flow requires authoring and SR persistence.
 - AT-013: Edit reviewed short-answer reset flow requires authoring and SR persistence.
 - AT-014: Backup/restore workflow not implemented yet.
