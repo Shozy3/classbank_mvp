@@ -169,6 +169,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 }
 .nav-link:hover { background: var(--hover-bg); color: var(--text-primary); }
 .nav-link.active { color: var(--accent); background: var(--accent-muted); border-left-color: var(--accent); }
+.nav-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 .nav-link-icon { font-size: 13px; flex-shrink: 0; }
 
 /* --------------------------------------------------------------------------
@@ -478,6 +482,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   border-color: var(--accent);
   color: var(--accent);
 }
+.filter-pill:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .item-count {
   font-size: var(--text-size-dense);
@@ -531,6 +539,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 .item-row:hover .item-row-actions { opacity: 1; }
 .item-row.selected { background: var(--selected-bg); }
 .item-row.bulk-selected { background: var(--accent-muted); }
+.item-row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
 
 .item-row-checkbox {
   width: 16px;
@@ -594,6 +606,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 .item-flag-btn:hover { background: var(--bg-elevated); }
 .item-flag-btn.bookmark-active { color: var(--bookmarked); }
 .item-flag-btn.flag-active { color: var(--flagged); }
+.item-flag-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .item-row-date {
   font-size: var(--text-size-dense);
@@ -624,6 +640,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 }
 .item-row-action-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
 .item-row-action-btn.danger:hover { background: var(--danger-muted); color: var(--incorrect); }
+.item-row-action-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 /* --------------------------------------------------------------------------
    Empty states
@@ -763,6 +783,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast);
 }
 .btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .btn-secondary {
   height: 32px;
@@ -777,6 +801,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 .btn-secondary:hover { background: var(--hover-bg); border-color: var(--border-strong); }
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .btn-danger {
   height: 32px;
@@ -791,6 +819,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast);
 }
 .btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
+.btn-danger:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .btn-ghost {
   height: 32px;
@@ -804,6 +836,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 .btn-ghost:hover { background: var(--hover-bg); color: var(--text-primary); }
+.btn-ghost:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .btn-sm { height: 26px; padding: 0 var(--sp-3); font-size: var(--text-size-dense); }
 
@@ -819,6 +855,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 .btn-icon:hover { background: var(--hover-bg); color: var(--text-primary); }
+.btn-icon:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 .btn-icon-text {
   display: flex;
@@ -836,6 +876,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 .btn-icon-text:hover { background: var(--hover-bg); color: var(--text-primary); border-color: var(--border-strong); }
+.btn-icon-text:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 /* --------------------------------------------------------------------------
    Modals

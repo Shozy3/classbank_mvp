@@ -96,6 +96,7 @@ export function getNavStatus(item) {
   }
   if (item.isSkipped)  return 'skipped';
   if (item.isAnswered) return 'answered';
+  if (item.hasBeenVisited) return 'unanswered';
   return 'unseen';
 }
 

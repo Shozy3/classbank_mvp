@@ -9,6 +9,30 @@ let sessionList = [];
 let selectedSessionId = null;
 let adaptiveWeakItems = [];
 
+const EMPTY_STATE_CONFIG = {
+  noHistory: {
+    title: 'No history yet',
+    message: 'Complete a practice session to populate this list.',
+    actionHref: '../practice-setup/index.html',
+    actionLabel: 'Start a practice session',
+    tone: 'neutral',
+  },
+  runtimeUnavailable: {
+    title: 'Desktop runtime required',
+    message: 'History is available in the desktop app runtime.',
+    actionHref: '../practice-setup/index.html',
+    actionLabel: 'Open Practice Setup',
+    tone: 'info',
+  },
+  loadFailed: {
+    title: 'History unavailable',
+    message: 'Unable to load session history. Retry after restarting the app.',
+    actionHref: '../practice-setup/index.html',
+    actionLabel: 'Open Practice Setup',
+    tone: 'error',
+  },
+};
+
 const els = {
   list: document.getElementById('history-list'),
   count: document.getElementById('history-count'),
@@ -55,12 +79,29 @@ function updateCountLabel() {
   els.count.textContent = `${sessionList.length} session${sessionList.length === 1 ? '' : 's'}`;
 }
 
-function renderEmpty(message) {
+function renderEmpty(stateKey) {
+  const state = EMPTY_STATE_CONFIG[stateKey] || EMPTY_STATE_CONFIG.noHistory;
+
   els.empty.hidden = false;
+  els.empty.classList.toggle('empty-state-error', state.tone === 'error');
+  els.empty.classList.toggle('empty-state-info', state.tone === 'info');
+
+  const titleNode = els.empty.querySelector('h3');
+  if (titleNode) {
+    titleNode.textContent = state.title;
+  }
+
   const messageNode = els.empty.querySelector('p');
   if (messageNode) {
-    messageNode.textContent = message;
+    messageNode.textContent = state.message;
   }
+
+  const actionNode = els.empty.querySelector('a.action-link');
+  if (actionNode) {
+    actionNode.textContent = state.actionLabel;
+    actionNode.setAttribute('href', state.actionHref);
+  }
+
   els.list.innerHTML = '';
   selectedSessionId = null;
   renderDetailPlaceholder('Select a session', 'Session details will appear here.');
@@ -78,7 +119,7 @@ function renderDetailPlaceholder(title, message) {
 
 function renderList() {
   if (!sessionList.length) {
-    renderEmpty('Complete a practice session to populate this list.');
+    renderEmpty('noHistory');
     return;
   }
 
@@ -183,7 +224,7 @@ function renderDetail(detail) {
     <div class="detail-card">
       <h3>Follow-up</h3>
       <a class="action-link" href="../practice-setup/index.html">Open Practice Setup</a>
-      ${hasCorruptRecord ? '<div class="badge warn" style="margin-top: 10px;">Corrupt session metadata detected. Showing safe fallback view.</div>' : ''}
+      ${hasCorruptRecord ? '<div class="badge warn detail-warning-badge">Corrupt session metadata detected. Showing safe fallback view.</div>' : ''}
     </div>
   `;
 }
@@ -235,7 +276,7 @@ async function loadHistory() {
   if (!window.api?.listSessionHistory) {
     sessionList = [];
     updateCountLabel();
-    renderEmpty('History is available in the desktop app runtime.');
+    renderEmpty('runtimeUnavailable');
     return;
   }
 
@@ -253,7 +294,7 @@ async function loadHistory() {
     console.error('[review-history] Failed to load history list.', error);
     sessionList = [];
     updateCountLabel();
-    renderEmpty('Unable to load session history.');
+    renderEmpty('loadFailed');
   }
 }
 

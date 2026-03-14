@@ -534,7 +534,7 @@ function renderEditor() {
 
   if (!state.form) {
     root.innerHTML = `
-      <div class="section">
+      <div class="section empty-editor-state" role="status" aria-live="polite">
         <h3 class="section-title">No item selected</h3>
         <p>Select an existing item from the left, or create a new question/flashcard.</p>
       </div>
@@ -545,7 +545,7 @@ function renderEditor() {
   const hasItemId = Boolean(state.form.questionId || state.form.flashcardId);
 
   root.innerHTML = `
-    ${state.error ? `<div class="error-banner">${escapeHtml(state.error)}</div>` : ''}
+    ${state.error ? `<div class="error-banner" role="alert">${escapeHtml(state.error)}</div>` : ''}
 
     <div class="section">
       <h3 class="section-title">Save Bar</h3>

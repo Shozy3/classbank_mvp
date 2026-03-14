@@ -168,6 +168,26 @@
   color: var(--text-primary);
 }
 
+.empty-state.empty-state-info {
+  border: 1px solid rgba(96, 165, 250, 0.32);
+  border-radius: var(--radius-control);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.empty-state.empty-state-info h3 {
+  color: var(--info);
+}
+
+.empty-state.empty-state-error {
+  border: 1px solid rgba(248, 113, 113, 0.36);
+  border-radius: var(--radius-control);
+  background: rgba(248, 113, 113, 0.09);
+}
+
+.empty-state.empty-state-error h3 {
+  color: var(--incorrect);
+}
+
 .action-link {
   display: inline-block;
   margin-top: var(--sp-3);
@@ -236,6 +256,10 @@
 .badge.warn {
   border-color: var(--warning);
   color: var(--warning);
+}
+
+.detail-warning-badge {
+  margin-top: 10px;
 }
 
 @media (max-width: 960px) {

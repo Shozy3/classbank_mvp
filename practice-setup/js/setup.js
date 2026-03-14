@@ -58,9 +58,29 @@ const SetupState = {
   mode:             'free_practice',
   timerMode:        'none',
   usingDb:          false,
+  setupNotice:      '',
+  setupNoticeLevel: 'info',
   srDueCounts:      { totalDue: 0, questionDue: 0, flashcardDue: 0 },
   adaptiveWeakCount: 0,
 };
+
+function setSetupNotice(message, level = 'info') {
+  SetupState.setupNotice = message || '';
+  SetupState.setupNoticeLevel = level;
+}
+
+function resetSelectionForCourse() {
+  SetupState.courseId = COURSE.course_id;
+  SetupState.unitIds.clear();
+  SetupState.topicIds.clear();
+
+  for (const unit of COURSE.units) {
+    SetupState.unitIds.add(unit.unit_id);
+    for (const topic of unit.topics) {
+      SetupState.topicIds.add(topic.topic_id);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Count computation
@@ -251,27 +271,20 @@ async function initSetup() {
     if (dbCourse) {
       COURSE = dbCourse;
       SetupState.usingDb = true;
+      setSetupNotice('');
     } else {
       SetupState.usingDb = false;
       COURSE = COURSE_DATA.courses[0];
+      setSetupNotice('Using fixture data because the local database is unavailable.', 'warning');
     }
   } catch (error) {
     console.error('[setup] Failed to load DB course hierarchy, using fallback fixture.', error);
     SetupState.usingDb = false;
     COURSE = COURSE_DATA.courses[0];
+    setSetupNotice('Using fixture data because the local database failed to load.', 'warning');
   }
 
-  SetupState.courseId = COURSE.course_id;
-  SetupState.unitIds.clear();
-  SetupState.topicIds.clear();
-
-  // Default: all units + topics selected
-  for (const unit of COURSE.units) {
-    SetupState.unitIds.add(unit.unit_id);
-    for (const topic of unit.topics) {
-      SetupState.topicIds.add(topic.topic_id);
-    }
-  }
+  resetSelectionForCourse();
 
   if (SetupState.usingDb) {
     try {
@@ -281,6 +294,8 @@ async function initSetup() {
       console.error('[setup] Failed to query DB question count, switching to fixture count.', error);
       SetupState.usingDb = false;
       COURSE = COURSE_DATA.courses[0];
+      resetSelectionForCourse();
+      setSetupNotice('Switched to fixture data after a database query failure.', 'warning');
       SetupState.maxCount = getMatchingCountLocal();
     }
   } else {
@@ -789,19 +804,32 @@ function updateSummary() {
   }
 
   if (warnSlot) {
-    let warnHtml = '';
+    const warnings = [];
+
+    if (SetupState.setupNotice) {
+      const icon = SetupState.setupNoticeLevel === 'warning' ? '⚠' : 'ℹ';
+      const toneClass = SetupState.setupNoticeLevel === 'warning' ? 'summary-warning-warn' : 'summary-warning-info';
+      warnings.push(`
+        <div class="summary-warning ${toneClass}" role="status" aria-live="polite">
+          <span class="summary-warning-icon">${icon}</span>
+          <span>${escapeHtml(SetupState.setupNotice)}</span>
+        </div>
+      `);
+    }
+
     if (warn) {
       const warnMsg = isSR
         ? 'No items are currently due for spaced review. Complete more content or wait for items to become due.'
         : 'No questions match the current filters. Adjust your selection to continue.';
-      warnHtml = `
+      warnings.push(`
         <div class="summary-warning" role="alert">
           <span class="summary-warning-icon">⚠</span>
           <span>${warnMsg}</span>
         </div>
-      `;
+      `);
     }
-    warnSlot.innerHTML = warnHtml;
+
+    warnSlot.innerHTML = warnings.join('');
   }
 
   if (startBtn) startBtn.disabled = warn;
@@ -1081,6 +1109,8 @@ async function recomputeCount() {
       console.error('[setup] Failed to recompute DB count. Falling back to fixture.', error);
       SetupState.usingDb = false;
       COURSE = COURSE_DATA.courses[0];
+      resetSelectionForCourse();
+      setSetupNotice('Switched to fixture data after a database query failure.', 'warning');
       next = getMatchingCountLocal();
     }
   } else {
@@ -1154,8 +1184,11 @@ async function startSession() {
       } else {
         preloadedQuestions = await queryMatchingQuestions({ randomSample: SetupState.questionCount });
       }
+      setSetupNotice('');
     } catch (error) {
       console.error('[setup] Failed to preload session content; session will fallback to fixture data.', error);
+      setSetupNotice('Session preload failed. Launching with fixture fallback content.', 'warning');
+      updateSummary();
     }
   }
 

@@ -3,22 +3,39 @@ function num(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function emptyCardMarkup({ title, message, tone = 'neutral' }) {
+  return `
+    <div class="empty-card empty-card-${tone}">
+      <h2>${title}</h2>
+      <p>${message}</p>
+    </div>
+  `;
+}
+
 function pct(value) {
   const n = Number(value);
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : 'N/A';
 }
 
-function renderPrimary(streak) {
+function renderPrimary(streak, options = {}) {
   const root = document.getElementById('stats-primary');
   if (!root) return;
 
+  if (options.error) {
+    root.innerHTML = emptyCardMarkup({
+      title: 'Stats unavailable',
+      message: 'Unable to load streak metrics right now. Retry after restarting the app.',
+      tone: 'error',
+    });
+    return;
+  }
+
   if (!streak) {
-    root.innerHTML = `
-      <div class="empty-card">
-        <h2>Streak</h2>
-        <p>No study activity yet. Start a session to begin your streak.</p>
-      </div>
-    `;
+    root.innerHTML = emptyCardMarkup({
+      title: 'Streak',
+      message: 'No study activity yet. Start a session to begin your streak.',
+      tone: 'neutral',
+    });
     return;
   }
 
@@ -39,13 +56,23 @@ function renderPrimary(streak) {
   `;
 }
 
-function renderSecondary(summary) {
+function renderSecondary(summary, options = {}) {
   const root = document.getElementById('stats-secondary');
   if (!root) return;
 
+  if (options.error) {
+    root.innerHTML = `
+      <article class="card empty-card empty-card-error">
+        <h2>Dashboard unavailable</h2>
+        <p>Unable to load summary metrics. Try again after restarting the app.</p>
+      </article>
+    `;
+    return;
+  }
+
   if (!summary) {
     root.innerHTML = `
-      <article class="card empty-card">
+      <article class="card empty-card empty-card-neutral">
         <h2>No Data</h2>
         <p>Stats appear after your first completed sessions.</p>
       </article>
@@ -97,26 +124,26 @@ function renderSecondary(summary) {
         <div class="metric-row"><span class="metric-label">Flashcard due</span><span class="metric-value">${num(due.flashcardDue)}</span></div>
         <div class="metric-row"><span class="metric-label">Adaptive weak MCQs</span><span class="metric-value">${num(adaptiveReview.weakQuestionCount)}</span></div>
       </div>
-      <div class="topic-pill-list" style="margin-top: 10px;">${weakTopicsMarkup}</div>
+      <div class="topic-pill-list topic-pill-list-spaced">${weakTopicsMarkup}</div>
     </article>
   `;
 }
 
 async function loadStats() {
   if (!window.api?.getStatsDashboardSummary) {
-    renderPrimary(null);
-    renderSecondary(null);
+    renderPrimary(null, { error: false });
+    renderSecondary(null, { error: false });
     return;
   }
 
   try {
     const summary = await window.api.getStatsDashboardSummary();
-    renderPrimary(summary?.streak || null);
-    renderSecondary(summary || null);
+    renderPrimary(summary?.streak || null, { error: false });
+    renderSecondary(summary || null, { error: false });
   } catch (error) {
     console.error('[stats-dashboard] Failed to load stats summary.', error);
-    renderPrimary(null);
-    renderSecondary(null);
+    renderPrimary(null, { error: true });
+    renderSecondary(null, { error: true });
   }
 }
 

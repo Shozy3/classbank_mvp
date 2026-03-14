@@ -108,6 +108,15 @@ textarea {
   font: inherit;
 }
 
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--selected-border);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
 textarea {
   min-height: 110px;
   line-height: var(--line-height-body);
@@ -129,10 +138,25 @@ button {
   cursor: pointer;
 }
 
+button:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--border-strong);
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--text-inverse);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 button:disabled {
@@ -170,6 +194,16 @@ button:disabled {
 .item-button.active {
   border-color: var(--selected-border);
   background: var(--selected-bg);
+}
+
+.item-button:hover {
+  border-color: var(--border-strong);
+  background: var(--hover-bg);
+}
+
+.item-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .choice-row {
@@ -282,6 +316,16 @@ button:disabled {
   border-radius: var(--radius-control);
   padding: var(--sp-2) var(--sp-3);
   margin-bottom: var(--sp-3);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-size-small);
+}
+
+.empty-editor-state {
+  color: var(--text-secondary);
+  line-height: var(--line-height-body);
 }
 
 @media (max-width: 1060px) {

@@ -651,6 +651,11 @@
   border-color: var(--border-strong);
 }
 
+.nav-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
 /* Current */
 .nav-item.current {
   background: var(--accent);
@@ -689,6 +694,13 @@
   background: var(--bg-elevated);
   color: var(--text-primary);
   border-color: var(--border-strong);
+}
+
+/* Unanswered (visited but no selection before leaving) */
+.nav-item.unanswered {
+  background: rgba(96, 165, 250, 0.06);
+  color: var(--info);
+  border-color: rgba(96, 165, 250, 0.35);
 }
 
 /* Skipped */

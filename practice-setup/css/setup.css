@@ -378,6 +378,12 @@
   margin-top: 1px;
 }
 
+.summary-warning.summary-warning-info {
+  background: rgba(96, 165, 250, 0.08);
+  border-color: rgba(96, 165, 250, 0.32);
+  color: var(--info);
+}
+
 /* --------------------------------------------------------------------------
    Start Session button
    -------------------------------------------------------------------------- */

@@ -1,9 +1,8 @@
 /**
  * explanation-panel.js — Right-side explanation surface.
  *
- * No event delegation needed — the panel is read-only.
  * Reveal is driven by toggling `.explanation-revealed` on #session-body.
- * The panel is ALWAYS mounted in the DOM; CSS handles width + opacity.
+ * The panel is always mounted in the DOM; CSS handles width + opacity.
  *
  * Content order (per spec):
  *   1. Result summary bar
@@ -21,6 +20,8 @@ import { SESSION_DATA } from '../data/seed.js';
  * @param {function}    onAction
  */
 export function setupExplanationPanel(panelEl, onAction) {
+  panelEl.setAttribute('aria-live', 'polite');
+
   panelEl.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-rating]');
     if (!btn || btn.disabled) return;
@@ -39,19 +40,26 @@ export function renderExplanationPanel(panelEl, sessionBodyEl, state) {
   const idx      = state.currentIndex;
   const item     = state.items[idx];
   const question = SESSION_DATA.questions[idx];
+  const panelInner = panelEl.querySelector('.explanation-panel-inner');
+
+  if (!panelInner || !item || !question) {
+    sessionBodyEl.classList.remove('explanation-revealed');
+    panelEl.setAttribute('aria-hidden', 'true');
+    return;
+  }
 
   if (!item.isRevealed) {
     // Collapse: remove class, clear content, restore aria-hidden
     sessionBodyEl.classList.remove('explanation-revealed');
     panelEl.setAttribute('aria-hidden', 'true');
-    panelEl.querySelector('.explanation-panel-inner').innerHTML = '';
+    panelInner.innerHTML = '';
     return;
   }
 
   // Expand
   sessionBodyEl.classList.add('explanation-revealed');
   panelEl.setAttribute('aria-hidden', 'false');
-  panelEl.querySelector('.explanation-panel-inner').innerHTML = buildExplanationHtml(item, question);
+  panelInner.innerHTML = buildExplanationHtml(item, question);
 }
 
 // ---------------------------------------------------------------------------

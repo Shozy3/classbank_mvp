@@ -8,6 +8,7 @@ const ItemList = (() => {
   let _countEl = null;
   let _bulkBarEl = null;
   let _bulkCountEl = null;
+  let _eventsBound = false;
 
   const TYPE_BADGE = {
     single_best: { label: 'MCQ',   cls: 'type-badge-mcq' },
@@ -27,6 +28,12 @@ const ItemList = (() => {
     _countEl    = countEl;
     _bulkBarEl  = bulkBarEl;
     _bulkCountEl = bulkCountEl;
+
+    if (_listEl && !_eventsBound) {
+      _listEl.addEventListener('click', _onListClick);
+      _listEl.addEventListener('keydown', _onListKeyDown);
+      _eventsBound = true;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -62,7 +69,6 @@ const ItemList = (() => {
     }
 
     _countEl.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
-    _listEl.addEventListener('click', _onListClick);
   }
 
   function _showEmpty(msg) {
@@ -78,6 +84,7 @@ const ItemList = (() => {
     row.dataset.itemId = item.id;
     row.dataset.itemType = item.contentType;
     row.setAttribute('role', 'listitem');
+    row.tabIndex = 0;
 
     if (state.selectedItemId === item.id) row.classList.add('selected');
     if (state.bulkSelectedIds.has(item.id)) row.classList.add('bulk-selected');
@@ -212,6 +219,24 @@ const ItemList = (() => {
     } else if (action === 'row-delete') {
       _confirmDelete(itemId, itemType);
     }
+  }
+
+  function _onListKeyDown(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+
+    const actionTarget = e.target.closest('[data-action]');
+    if (actionTarget) {
+      if (e.key === ' ') {
+        e.preventDefault();
+      }
+      actionTarget.click();
+      return;
+    }
+
+    const row = e.target.closest('.item-row');
+    if (!row) return;
+    e.preventDefault();
+    _selectItem(row.dataset.itemId, row.dataset.itemType);
   }
 
   function _selectItem(itemId, itemType) {

@@ -22,6 +22,16 @@ export function setupNavigator(containerEl, onAction) {
       onAction({ type: 'goTo', index });
     }
   });
+
+  containerEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = e.target.closest('[data-nav-index]');
+    if (!item) return;
+    const index = parseInt(item.dataset.navIndex, 10);
+    if (Number.isNaN(index)) return;
+    e.preventDefault();
+    onAction({ type: 'goTo', index });
+  });
 }
 
 /**
@@ -77,6 +87,7 @@ function buildNavItemClasses(navStatus, isCurrent, isFlagged, isBookmarked) {
       case 'incorrect': classes.push('incorrect'); break;
       case 'skipped':   classes.push('skipped');   break;
       case 'answered':  classes.push('answered');  break;
+      case 'unanswered': classes.push('unanswered'); break;
       // 'unseen' — no extra class, default styling
     }
   }
@@ -94,6 +105,7 @@ function buildNavTitle(navStatus, item) {
     incorrect: ' — Incorrect',
     skipped:   ' — Skipped',
     answered:  ' — Answered',
+    unanswered: ' — Unanswered',
     unseen:    '',
   }[navStatus] ?? '';
 

@@ -43,6 +43,7 @@ let els = {};
 let sessionRuntime = null;
 let persistTimer = null;
 let persistenceInFlight = false;
+let persistencePromise = null;
 let finalizeTriggered = false;
 const srRatingInFlight = new Set();
 const adaptiveResultInFlight = new Set();
@@ -121,7 +122,7 @@ window.addEventListener('beforeunload', () => {
 // ---------------------------------------------------------------------------
 // Action dispatcher
 // ---------------------------------------------------------------------------
-function dispatch(action) {
+async function dispatch(action) {
   const idx = SessionState.currentIndex;
   let shouldPersist = false;
 
@@ -147,11 +148,13 @@ function dispatch(action) {
       return; // early return — skip full renderAll
 
     case 'skip':
+      await flushPendingPersistence();
       skipCurrent();
       shouldPersist = true;
       break;
 
     case 'reveal':
+      await flushPendingPersistence();
       reveal();
       void maybePersistAdaptiveMcqResult(idx);
       shouldPersist = true;
@@ -204,25 +207,30 @@ function dispatch(action) {
       break;
 
     case 'prev':
+      await flushPendingPersistence();
       goPrev();
       shouldPersist = true;
       break;
 
     case 'next':
+      await flushPendingPersistence();
       goNext();
       shouldPersist = true;
       break;
 
     case 'goTo':
+      await flushPendingPersistence();
       goTo(action.index);
       shouldPersist = true;
       break;
 
     case 'reviewIncorrect':
+      await flushPendingPersistence();
       startIncorrectReview();
       return;
 
     case 'returnToSetup':
+      await flushPendingPersistence();
       window.location.href = '../practice-setup/index.html';
       return;
 
@@ -260,6 +268,17 @@ function schedulePersist() {
   persistTimer = setTimeout(() => {
     void saveSessionProgress();
   }, 180);
+}
+
+async function flushPendingPersistence() {
+  if (!sessionRuntime) return;
+
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+
+  await saveSessionProgress();
 }
 
 async function persistSpacedReviewRating({ index, priorRating, priorSyncState, priorSyncError, payload }) {
@@ -470,16 +489,23 @@ async function saveSessionProgress() {
     return;
   }
 
-  if (persistenceInFlight) return;
+  if (persistencePromise) {
+    return persistencePromise;
+  }
 
   persistenceInFlight = true;
-  try {
-    await window.api.saveSession(buildSavePayload('saveProgress'));
-  } catch (error) {
-    console.error('[session] Failed to persist session progress.', error);
-  } finally {
-    persistenceInFlight = false;
-  }
+  persistencePromise = (async () => {
+    try {
+      await window.api.saveSession(buildSavePayload('saveProgress'));
+    } catch (error) {
+      console.error('[session] Failed to persist session progress.', error);
+    } finally {
+      persistenceInFlight = false;
+      persistencePromise = null;
+    }
+  })();
+
+  return persistencePromise;
 }
 
 async function finalizeSessionPersistence() {
