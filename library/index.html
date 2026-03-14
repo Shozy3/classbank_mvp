@@ -41,6 +41,16 @@
           <span class="btn-icon">+</span> Course
         </button>
       </div>
+      <section id="backup-controls" aria-label="Data safety">
+        <div class="backup-controls-header">Data Safety</div>
+        <div class="backup-controls-row">
+          <button id="btn-create-backup" class="btn-secondary btn-sm" type="button">Create Backup</button>
+          <button id="btn-pick-backup" class="btn-ghost btn-sm" type="button">Choose File...</button>
+        </div>
+        <select id="sel-backup-file" class="select-input backup-select" aria-label="Available backups"></select>
+        <button id="btn-restore-backup" class="btn-danger btn-sm" type="button">Restore Backup</button>
+        <p id="backup-status" class="backup-status" aria-live="polite"></p>
+      </section>
       <div id="hierarchy-tree" role="tree" aria-label="Courses"></div>
       <div id="hierarchy-empty" class="empty-state" hidden>
         <p>No courses yet.</p>
@@ -142,6 +152,21 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="btn-move-cancel">Cancel</button>
       <button class="btn-primary"   id="btn-move-confirm">Move</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Restore backup confirmation modal -->
+<dialog id="modal-restore-confirm" class="modal">
+  <div class="modal-inner">
+    <h2 class="modal-title">Confirm Restore</h2>
+    <p class="modal-body">Restoring will overwrite your current data with the selected backup. Type RESTORE to continue.</p>
+    <label class="field-label">Type RESTORE
+      <input id="restore-confirm-input" class="select-input" type="text" autocomplete="off" spellcheck="false" placeholder="RESTORE">
+    </label>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-restore-cancel" type="button">Cancel</button>
+      <button class="btn-danger" id="btn-restore-confirm" type="button" disabled>Restore Now</button>
     </div>
   </div>
 </dialog>

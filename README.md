@@ -61,6 +61,14 @@ All navigator states — unanswered, correct, incorrect, skipped, bookmarked, fl
 
 **Persistence:** SQLite is wired through Electron IPC and used by Library/Authoring/Session flows.
 
+## Backup and restore
+
+- Open Library and use the Data Safety section in the left pane.
+- Click Create Backup to write a local SQLite backup in the app backup directory.
+- To restore, pick a backup file and confirm by typing RESTORE in the confirmation dialog.
+- Restore is fail-safe: source backup validation runs before overwrite, and restore executes in a single DB transaction.
+- After restore completes, use the reload action shown in status text to refresh in-memory screen state.
+
 ---
 
 ## Release Notes (March 2026)

@@ -41,5 +41,7 @@ contextBridge.exposeInMainWorld('api', {
   recordAdaptiveMcqResult: (p) => ipcRenderer.invoke('db:recordAdaptiveMcqResult', p),
   listAdaptiveWeakQuestions: (p) => ipcRenderer.invoke('db:listAdaptiveWeakQuestions', p),
   createBackup: (p) => ipcRenderer.invoke('db:createBackup', p),
+  listBackups: (p) => ipcRenderer.invoke('db:listBackups', p),
   restoreBackup: (p) => ipcRenderer.invoke('db:restoreBackup', p),
+  chooseBackupFile: () => ipcRenderer.invoke('app:chooseBackupFile'),
 });

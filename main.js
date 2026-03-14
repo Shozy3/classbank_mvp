@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const {
   initializeDatabase,
   closeDatabase,
@@ -42,6 +42,7 @@ const {
   recordAdaptiveMcqResult,
   listAdaptiveWeakQuestions,
   createBackup,
+  listBackups,
   restoreBackup,
 } = require('./db');
 
@@ -157,7 +158,28 @@ ipcMain.handle('db:recordSpacedReviewRating', withDbHandler('recordSpacedReviewR
 ipcMain.handle('db:recordAdaptiveMcqResult', withDbHandler('recordAdaptiveMcqResult', (p) => recordAdaptiveMcqResult(p)));
 ipcMain.handle('db:listAdaptiveWeakQuestions', withDbHandler('listAdaptiveWeakQuestions', (p) => listAdaptiveWeakQuestions(p)));
 ipcMain.handle('db:createBackup', withDbHandler('createBackup', (p) => createBackup(p)));
+ipcMain.handle('db:listBackups', withDbHandler('listBackups', (p) => listBackups(p)));
 ipcMain.handle('db:restoreBackup', withDbHandler('restoreBackup', (p) => restoreBackup(p)));
+
+ipcMain.handle('app:chooseBackupFile', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select ClassBank backup file',
+    properties: ['openFile'],
+    filters: [
+      { name: 'SQLite backup files', extensions: ['sqlite', 'db'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  });
+
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return { canceled: true, filePath: null };
+  }
+
+  return {
+    canceled: false,
+    filePath: result.filePaths[0],
+  };
+});
 
 ipcMain.handle('db:getTopics', withDbHandler('getTopics', (unitId) => getTopics(unitId)));
 

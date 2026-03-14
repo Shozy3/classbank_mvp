@@ -2871,6 +2871,95 @@ function createBackup({ notes } = {}) {
   };
 }
 
+const BACKUP_RESTORE_TABLES = [
+  'courses',
+  'units',
+  'topics',
+  'questions',
+  'question_choices',
+  'media_assets',
+  'flashcards',
+  'practice_sessions',
+  'practice_session_items',
+  'review_snapshots',
+  'revision_snapshots',
+  'app_settings',
+  'backup_records',
+];
+
+function validateBackupSourceDb(filePath, requiredTables = BACKUP_RESTORE_TABLES) {
+  let sourceDb = null;
+  try {
+    sourceDb = new Database(filePath, { readonly: true, fileMustExist: true });
+  } catch (error) {
+    throw new Error(`Backup file is not a readable SQLite database: ${error.message}`);
+  }
+
+  try {
+    const integrityRow = sourceDb.prepare('PRAGMA integrity_check').get();
+    const integrityValue = integrityRow && Object.values(integrityRow)[0];
+    if (integrityValue !== 'ok') {
+      throw new Error(`Backup integrity check failed: ${integrityValue || 'unknown error'}`);
+    }
+
+    const tableRows = sourceDb.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+    `).all();
+
+    const available = new Set(tableRows.map((row) => row.name));
+    const missing = requiredTables.filter((tableName) => !available.has(tableName));
+    if (missing.length > 0) {
+      throw new Error(`Backup schema mismatch, missing required tables: ${missing.join(', ')}`);
+    }
+
+    return {
+      ok: true,
+      tableCount: requiredTables.length,
+    };
+  } finally {
+    if (sourceDb) {
+      sourceDb.close();
+    }
+  }
+}
+
+function listBackups({ limit } = {}) {
+  const conn = ensureDbOpen();
+  const parsedLimit = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.min(500, Math.floor(Number(limit))))
+    : 100;
+
+  const rows = conn.prepare(`
+    SELECT id, file_path, created_at, notes
+    FROM backup_records
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(parsedLimit);
+
+  return rows.map((row) => {
+    const exists = fs.existsSync(row.file_path);
+    let fileSizeBytes = null;
+    if (exists) {
+      try {
+        fileSizeBytes = fs.statSync(row.file_path).size;
+      } catch {
+        fileSizeBytes = null;
+      }
+    }
+
+    return {
+      backupId: row.id,
+      filePath: row.file_path,
+      createdAt: row.created_at,
+      notes: row.notes,
+      exists,
+      fileSizeBytes,
+    };
+  });
+}
+
 function restoreBackup({ filePath, confirmOverwrite } = {}) {
   if (!confirmOverwrite) {
     throw new Error('restoreBackup requires confirmOverwrite=true.');
@@ -2883,32 +2972,24 @@ function restoreBackup({ filePath, confirmOverwrite } = {}) {
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(`Backup file does not exist: ${resolvedPath}`);
   }
+  const sourceStat = fs.statSync(resolvedPath);
+  if (!sourceStat.isFile()) {
+    throw new Error(`Backup path is not a file: ${resolvedPath}`);
+  }
 
   const conn = ensureDbOpen();
   const escapedPath = resolvedPath.replace(/'/g, "''");
-
-  const tableNames = [
-    'courses',
-    'units',
-    'topics',
-    'questions',
-    'question_choices',
-    'media_assets',
-    'flashcards',
-    'practice_sessions',
-    'practice_session_items',
-    'review_snapshots',
-    'revision_snapshots',
-    'app_settings',
-    'backup_records',
-  ];
+  validateBackupSourceDb(resolvedPath, BACKUP_RESTORE_TABLES);
+  const rowCounts = {};
 
   conn.pragma('foreign_keys = OFF');
   try {
     conn.exec(`ATTACH DATABASE '${escapedPath}' AS restore_src`);
     conn.exec('BEGIN IMMEDIATE');
 
-    for (const tableName of tableNames) {
+    for (const tableName of BACKUP_RESTORE_TABLES) {
+      const sourceRow = conn.prepare(`SELECT COUNT(*) AS count FROM restore_src.${tableName}`).get();
+      rowCounts[tableName] = sourceRow ? sourceRow.count : 0;
       conn.exec(`DELETE FROM ${tableName}`);
       conn.exec(`INSERT INTO ${tableName} SELECT * FROM restore_src.${tableName}`);
     }
@@ -2935,6 +3016,8 @@ function restoreBackup({ filePath, confirmOverwrite } = {}) {
     ok: true,
     filePath: resolvedPath,
     restoredAt: nowIso(),
+    tableCount: BACKUP_RESTORE_TABLES.length,
+    rowCounts,
   };
 }
 
@@ -2980,5 +3063,6 @@ module.exports = {
   recordAdaptiveMcqResult,
   listAdaptiveWeakQuestions,
   createBackup,
+  listBackups,
   restoreBackup,
 };

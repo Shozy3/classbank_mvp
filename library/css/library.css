@@ -232,6 +232,54 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   letter-spacing: 0.06em;
 }
 
+#backup-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel-secondary);
+}
+
+.backup-controls-header {
+  font-size: var(--text-size-dense);
+  font-weight: var(--text-weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.backup-controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.backup-select {
+  width: 100%;
+  min-height: 30px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  padding: 0 var(--sp-2);
+  color: var(--text-primary);
+}
+
+.backup-status {
+  min-height: 18px;
+  font-size: var(--text-size-dense);
+  color: var(--text-muted);
+  line-height: var(--line-height-dense);
+}
+
+.backup-status.success {
+  color: var(--correct);
+}
+
+.backup-status.error {
+  color: var(--incorrect);
+}
+
 /* --------------------------------------------------------------------------
    Hierarchy tree
    -------------------------------------------------------------------------- */
@@ -858,6 +906,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
 }
 .select-input:focus { border-color: var(--selected-border); box-shadow: 0 0 0 2px var(--focus-ring); }
 .select-input:disabled { opacity: 0.45; }
+
+#restore-confirm-input {
+  text-transform: uppercase;
+}
 
 /* --------------------------------------------------------------------------
    Inline rename input (floating)

@@ -10,6 +10,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const workspaceEl     = document.getElementById('library-workspace');
   const paneHeaderBtn   = document.getElementById('btn-create-course');
   const emptyCreateBtn  = document.getElementById('btn-create-course-empty');
+  const createBackupBtn = document.getElementById('btn-create-backup');
+  const pickBackupBtn   = document.getElementById('btn-pick-backup');
+  const restoreBackupBtn = document.getElementById('btn-restore-backup');
+  const backupSelectEl  = document.getElementById('sel-backup-file');
+  const backupStatusEl  = document.getElementById('backup-status');
+  const restoreConfirmModal = document.getElementById('modal-restore-confirm');
+  const restoreConfirmInput = document.getElementById('restore-confirm-input');
+  const restoreConfirmCancelBtn = document.getElementById('btn-restore-cancel');
+  const restoreConfirmAcceptBtn = document.getElementById('btn-restore-confirm');
 
   const searchInput     = document.getElementById('search-input');
   const typeFilterGroup = document.getElementById('type-filter');
@@ -88,6 +97,108 @@ document.addEventListener('DOMContentLoaded', async () => {
   // -------------------------------------------------------------------------
   paneHeaderBtn.addEventListener('click', () => HierarchyTree.showCreateCourse());
   emptyCreateBtn.addEventListener('click', () => HierarchyTree.showCreateCourse());
+
+  // -------------------------------------------------------------------------
+  // Backup + restore controls
+  // -------------------------------------------------------------------------
+  const backupApiAvailable = Boolean(
+    window.api
+    && typeof window.api.createBackup === 'function'
+    && typeof window.api.listBackups === 'function'
+    && typeof window.api.restoreBackup === 'function'
+  );
+
+  if (!backupApiAvailable) {
+    createBackupBtn.disabled = true;
+    pickBackupBtn.disabled = true;
+    restoreBackupBtn.disabled = true;
+    setBackupStatus('Backup controls are only available in the desktop app.', 'error');
+  } else {
+    await refreshBackupOptions();
+
+    createBackupBtn.addEventListener('click', async () => {
+      createBackupBtn.disabled = true;
+      try {
+        const result = await window.api.createBackup({ notes: 'Created from Library screen' });
+        await refreshBackupOptions(result.filePath);
+        setBackupStatus(`Backup created: ${result.filePath}`, 'success');
+      } catch (err) {
+        console.error('[library] create backup failed:', err);
+        setBackupStatus(err?.message || 'Failed to create backup.', 'error');
+      } finally {
+        createBackupBtn.disabled = false;
+      }
+    });
+
+    pickBackupBtn.addEventListener('click', async () => {
+      if (!window.api.chooseBackupFile) {
+        setBackupStatus('File picker is unavailable in this environment.', 'error');
+        return;
+      }
+      try {
+        const choice = await window.api.chooseBackupFile();
+        if (!choice || choice.canceled || !choice.filePath) return;
+        await refreshBackupOptions(choice.filePath);
+        setBackupStatus(`Selected backup: ${choice.filePath}`, null);
+      } catch (err) {
+        console.error('[library] choose backup file failed:', err);
+        setBackupStatus(err?.message || 'Failed to choose backup file.', 'error');
+      }
+    });
+
+    restoreBackupBtn.addEventListener('click', async () => {
+      const filePath = backupSelectEl.value;
+      if (!filePath) {
+        setBackupStatus('Choose a backup file before restoring.', 'error');
+        return;
+      }
+
+      openRestoreConfirmModal(filePath);
+    });
+
+    restoreConfirmInput.addEventListener('input', () => {
+      restoreConfirmAcceptBtn.disabled = restoreConfirmInput.value.trim().toUpperCase() !== 'RESTORE';
+    });
+
+    restoreConfirmCancelBtn.addEventListener('click', () => {
+      closeRestoreConfirmModal();
+      setBackupStatus('Restore canceled.', null);
+    });
+
+    restoreConfirmAcceptBtn.addEventListener('click', async () => {
+      const filePath = restoreConfirmModal.dataset.filePath;
+      if (!filePath) {
+        closeRestoreConfirmModal();
+        setBackupStatus('Restore target missing. Select a backup and try again.', 'error');
+        return;
+      }
+
+      closeRestoreConfirmModal();
+      restoreBackupBtn.disabled = true;
+      try {
+        const result = await window.api.restoreBackup({
+          filePath,
+          confirmOverwrite: true,
+        });
+        setBackupStatus(`Restore complete from ${result.filePath}. Click here to reload now.`, 'success', {
+          actionLabel: 'Reload now',
+          onAction: () => window.location.reload(),
+        });
+        await refreshBackupOptions(result.filePath);
+      } catch (err) {
+        console.error('[library] restore backup failed:', err);
+        setBackupStatus(err?.message || 'Restore failed.', 'error');
+      } finally {
+        restoreBackupBtn.disabled = false;
+      }
+    });
+
+    restoreConfirmModal.addEventListener('click', (e) => {
+      if (e.target === restoreConfirmModal) {
+        closeRestoreConfirmModal();
+      }
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Search input (client-side filter, no debounce needed for local data)
@@ -432,5 +543,80 @@ document.addEventListener('DOMContentLoaded', async () => {
       displayTitle: LibraryState.stripHtml(f.frontHtml).slice(0, 80),
       previewText: LibraryState.stripHtml(f.frontHtml),
     };
+  }
+
+  async function refreshBackupOptions(selectedFilePath = null) {
+    const backups = await window.api.listBackups({ limit: 100 });
+    const priorValue = backupSelectEl.value;
+    const preferred = selectedFilePath || priorValue;
+
+    backupSelectEl.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = backups.length > 0
+      ? 'Select backup file...'
+      : 'No backups recorded yet';
+    backupSelectEl.appendChild(placeholder);
+
+    for (const backup of backups) {
+      const option = document.createElement('option');
+      option.value = backup.filePath;
+      const baseName = backup.filePath.split('/').pop();
+      const size = backup.fileSizeBytes == null
+        ? 'unknown size'
+        : `${Math.max(1, Math.round(backup.fileSizeBytes / 1024))} KB`;
+      option.textContent = `${backup.createdAt} - ${baseName} (${size})${backup.exists ? '' : ' [missing]'}`;
+      backupSelectEl.appendChild(option);
+    }
+
+    if (preferred) {
+      const hasPreferred = Array.from(backupSelectEl.options).some((opt) => opt.value === preferred);
+      if (hasPreferred) {
+        backupSelectEl.value = preferred;
+      } else {
+        const customOption = document.createElement('option');
+        customOption.value = preferred;
+        customOption.textContent = `${preferred} [manual]`;
+        backupSelectEl.appendChild(customOption);
+        backupSelectEl.value = preferred;
+      }
+    }
+  }
+
+  function setBackupStatus(message, kind, action = null) {
+    backupStatusEl.innerHTML = '';
+    backupStatusEl.textContent = message || '';
+    backupStatusEl.classList.remove('success', 'error');
+    if (kind === 'success' || kind === 'error') {
+      backupStatusEl.classList.add(kind);
+    }
+
+    if (action && typeof action.onAction === 'function') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'link-btn';
+      btn.textContent = action.actionLabel || 'Run action';
+      btn.addEventListener('click', action.onAction);
+      backupStatusEl.append(' ');
+      backupStatusEl.appendChild(btn);
+    }
+  }
+
+  function openRestoreConfirmModal(filePath) {
+    restoreConfirmModal.dataset.filePath = filePath;
+    restoreConfirmInput.value = '';
+    restoreConfirmAcceptBtn.disabled = true;
+    restoreConfirmModal.showModal();
+    restoreConfirmInput.focus();
+  }
+
+  function closeRestoreConfirmModal() {
+    restoreConfirmModal.dataset.filePath = '';
+    restoreConfirmInput.value = '';
+    restoreConfirmAcceptBtn.disabled = true;
+    if (restoreConfirmModal.open) {
+      restoreConfirmModal.close();
+    }
   }
 });
