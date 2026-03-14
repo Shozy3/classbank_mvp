@@ -13,7 +13,9 @@
     "test": "npm run rebuild:native:node && node --test tests/**/*.test.mjs",
     "smoke:electron-db": "npm run rebuild:native:electron && node temp/pw-runner/electron-db-smoke.mjs",
     "smoke:authoring-rich": "npm run rebuild:native:electron && node temp/pw-runner/authoring-rich-smoke.mjs",
-    "at:interactive": "npm run rebuild:native:electron && cd temp/pw-runner && node interactive-at-runner.mjs",
+    "at:interactive": "npm run rebuild:native:electron && node scripts/interactive-at-runner.mjs",
+    "at:validate-report": "node scripts/validate-at-report.mjs",
+    "at:signoff-check": "node scripts/validate-at-report.mjs --require-all-pass",
     "verify:core": "npm test && npm run smoke:electron-db && npm run smoke:authoring-rich"
   },
   "dependencies": {

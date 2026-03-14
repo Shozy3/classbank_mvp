@@ -103,7 +103,20 @@ Individual commands:
 npm test
 npm run smoke:electron-db
 npm run smoke:authoring-rich
+npm run at:interactive
+npm run at:validate-report
+npm run at:signoff-check
 ```
+
+`npm run at:interactive` now runs the full Issue 14 chain (interactive sweep + report validation + strict signoff gate) via `scripts/interactive-at-runner.mjs`.
+
+Acceptance sweep prerequisites:
+
+```bash
+python3 -m http.server 8741
+```
+
+Issue 14 runbook: [`docs/qa/issue-14-acceptance-sweep.md`](docs/qa/issue-14-acceptance-sweep.md)
 
 ---
 

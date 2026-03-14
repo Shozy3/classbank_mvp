@@ -25,57 +25,55 @@ Closed: 0
 | #2 | Phase 1: SQLite persistence layer | Open | No | phase-1, must-have | 2026-03-11 | 2026-03-11 | https://github.com/Shozy3/classbank_mvp/issues/2 | Wire better-sqlite3 into Electron, initialize schema, and expose core IPC read/write methods. |
 | #1 | Phase 1: Electron app shell | Open | No | phase-1, must-have | 2026-03-11 | 2026-03-11 | https://github.com/Shozy3/classbank_mvp/issues/1 | Bootstrap the macOS Electron shell with native windowing and IPC foundation. |
 
-## Local Execution Update (2026-03-13)
+## Local Execution Update (2026-03-14)
 
-### Issue #2 Status
-- Implemented locally: SQLite persistence layer wired through Electron main process IPC.
-- Scope completed: schema bootstrap, first-run seed path, read IPC handlers, renderer integration for setup/session loading.
-
-### Issue #3 Status
-- Implemented locally (in progress): Session write-back persistence wired end-to-end.
-- Scope completed so far:
-	- `db:saveSession` IPC now writes to `practice_sessions` + `practice_session_items`.
-	- Incremental session progress writes from Practice Session interactions.
-	- Finalize write updates question aggregate fields (`times_seen`, `times_correct`, `times_incorrect`, `last_result`, `last_used_at`).
-	- Incorrect-only and unseen-only filters added to DB query path.
-	- Review Incorrect mode enabled in Practice Setup with persisted-history filtering.
-	- Local-history fallback enabled for static browser acceptance runner (non-Electron path).
+### Issue #14 Status
+- In progress: acceptance test sweep execution and evidence tracking for MVP sign-off.
+- Scope executed locally: full interactive acceptance sweep plus core verification reruns.
 
 ### Acceptance + Interactive Test Sweep
 
-Source: `temp/at-report.json`
+Source: `temp/at-report.json` (generated `2026-03-14T20:17:01.208Z`)
 
 | Status | Count |
 |---|---:|
-| Pass | 8 |
+| Pass | 19 |
 | Fail | 0 |
-| Blocked | 8 |
-| Total | 16 |
+| Blocked | 0 |
+| Total | 19 |
 
 Passed IDs:
+- AT-001
+- AT-002
 - AT-003
+- AT-004
+- AT-005
 - AT-006
+- AT-007
 - AT-008
 - AT-009
 - AT-010
 - AT-011
+- AT-012
+- AT-013
+- AT-014
 - AT-015
+- AT-016
+- AT-017
+- AT-SR-001
 - SMOKE-UI-ERRORS
 
-Blocked IDs and reasons:
-- AT-001: Library/authoring hierarchy creation flow not implemented in current UI.
-- AT-002: Authoring rich MCQ creation/editing UI not implemented.
-- AT-004: Spaced review engine and short-answer SR rating persistence not implemented.
-- AT-005: Flashcard authoring and spaced review scheduling not implemented.
-- AT-007: Timed block mode is disabled in Practice Setup.
-- AT-012: Edit reviewed flashcard reset flow requires authoring and SR persistence.
-- AT-013: Edit reviewed short-answer reset flow requires authoring and SR persistence.
-- AT-014: Backup/restore workflow not implemented yet.
+### Verification Commands Run
+- `npm run at:interactive`
+- `npm run at:validate-report`
+- `npm run at:signoff-check`
+- `npm run verify:core`
 
-### Smoke Checks
-- Electron DB smoke: pass (`temp/pw-runner/electron-db-smoke.mjs`)
-- Session seed smoke: pass (`temp/session-seed-smoke.mjs`)
+### Notes
+- Acceptance contract in `acceptance-tests.md` is now fully covered by passing AT-001 through AT-017.
+- `AT-SR-001` is an additional spaced-review coverage case included by the interactive runner.
+- No blocked acceptance cases remain in the current local run set.
 
 ### Follow-up Recommendation
-- Keep Issue #2 open until commit is pushed and issue tracker is updated remotely.
-- Use this local update as handoff context for closing Issue #2 and scoping Issue #3.
+- Keep Issue #14 open until this run evidence is mirrored to remote issue tracking notes.
+- Close Issue #14 once the latest pass matrix and command provenance are posted in the GitHub issue.
