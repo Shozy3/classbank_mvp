@@ -29,6 +29,7 @@
     "appId": "com.classbank.mvp",
     "productName": "ClassBank",
     "mac": {
+      "identity": null,
       "icon": "assets/icon.icns",
       "category": "public.app-category.education"
     }
