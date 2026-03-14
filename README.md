@@ -63,14 +63,21 @@ All navigator states — unanswered, correct, incorrect, skipped, bookmarked, fl
 
 ---
 
-## Release Update (March 2026)
+## Release Notes (March 2026)
 
-- Added an adaptive MCQ review engine in the DB layer with per-question weakness scoring and weak-item query support.
-- Added spaced review mode in setup/session, including flashcard front/back reveal and recall rating controls.
-- Added session completion summary with outcome totals and one-click handoff to Review Incorrect sessions.
-- Consolidated setup filter-rule behavior so `incorrectOnly`, `adaptiveWeakOnly`, and `unseenOnly` remain mutually exclusive.
-- Updated Review History and Stats Dashboard surfaces to expose adaptive weak-question indicators.
-- Expanded automated coverage with new suites for session completion, setup contract behavior, and setup filter rules.
+This release completes the adaptive review loop across setup, session, persistence, and reporting surfaces.
+
+### Highlights
+
+- Adaptive MCQ review engine now tracks per-question weakness and powers ranked weak-item retrieval.
+- Spaced Review mode now runs end-to-end in setup and session, including flashcard front/back recall flow.
+- Session completion now shows a full summary with one-click handoff into Review Incorrect.
+
+### Included updates
+
+- Setup behavior now enforces deterministic filter rules (`incorrectOnly`, `adaptiveWeakOnly`, `unseenOnly`).
+- Review History and Stats Dashboard now expose adaptive weak-question indicators.
+- Test coverage expanded with dedicated suites for session completion, setup contract behavior, and setup filter rules.
 
 ---
 
