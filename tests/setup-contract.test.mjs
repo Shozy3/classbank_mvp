@@ -362,6 +362,43 @@ describe('recordSpacedReviewRating', () => {
     assert.ok(typeof refreshed.srStateJson.lastReviewedAt === 'string');
   });
 
+  test('metadata-only flashcard edit preserves SR state', () => {
+    const created = db.createFlashcard({
+      topicId: KNOWN_TOPIC_ID,
+      frontHtml: '<p>Metadata preserve front</p>',
+      backHtml: '<p>Metadata preserve back</p>',
+      referenceText: 'metadata-preserve test',
+      isBookmarked: false,
+      isFlagged: false,
+    });
+
+    db.recordSpacedReviewRating({
+      contentType: 'flashcard',
+      itemId: created.flashcardId,
+      selfRating: 'Good',
+      result: 'correct',
+      timeSpentSeconds: 7,
+    });
+
+    const before = db.getFlashcardById(created.flashcardId);
+    assert.ok(before.srStateJson, 'precondition: flashcard SR state exists before metadata edit');
+
+    const updated = db.updateFlashcard({
+      flashcardId: created.flashcardId,
+      topicId: before.topicId,
+      frontHtml: before.frontHtml,
+      backHtml: before.backHtml,
+      referenceText: before.referenceText,
+      isBookmarked: !before.isBookmarked,
+      isFlagged: before.isFlagged,
+    });
+
+    assert.ok(updated.srStateJson, 'metadata-only edit should preserve flashcard SR state');
+    assert.equal(updated.reviewCount, before.reviewCount);
+    assert.equal(updated.lapseCount, before.lapseCount);
+    assert.equal(updated.dueAt, before.dueAt);
+  });
+
   test('editing a previously short-answer item to MCQ clears SR state', () => {
     const created = db.createQuestion({
       topicId: KNOWN_TOPIC_ID,
@@ -405,6 +442,51 @@ describe('recordSpacedReviewRating', () => {
 
     assert.equal(updated.questionType, 'single_best');
     assert.equal(updated.adaptiveReviewStateJson, null, 'converted item must clear prior short-answer SR state');
+  });
+
+  test('metadata-only short-answer edit preserves SR state', () => {
+    const created = db.createQuestion({
+      topicId: KNOWN_TOPIC_ID,
+      questionType: 'short_answer',
+      title: `Metadata preserve SA ${Date.now()}`,
+      stem: '<p>Original short answer prompt.</p>',
+      modelAnswerHtml: '<p>Original model answer.</p>',
+      mainExplanationHtml: '<p>Original explanation.</p>',
+      referenceText: 'metadata-preserve SA',
+      difficulty: 2,
+      isBookmarked: false,
+      isFlagged: false,
+    });
+
+    db.recordSpacedReviewRating({
+      contentType: 'question',
+      itemId: created.questionId,
+      selfRating: 'Good',
+      result: 'correct',
+      timeSpentSeconds: 10,
+    });
+
+    const before = db.getQuestionById(created.questionId);
+    assert.ok(before.adaptiveReviewStateJson, 'precondition: short-answer SR state exists before metadata edit');
+
+    const updated = db.updateQuestion({
+      questionId: before.questionId,
+      topicId: before.topicId,
+      questionType: before.questionType,
+      title: `${before.title} (retitled)`,
+      stem: before.stem,
+      modelAnswerHtml: before.modelAnswerHtml,
+      mainExplanationHtml: before.mainExplanationHtml,
+      referenceText: before.referenceText,
+      difficulty: before.difficulty,
+      isBookmarked: !before.isBookmarked,
+      isFlagged: before.isFlagged,
+      choices: [],
+    });
+
+    assert.ok(updated.adaptiveReviewStateJson, 'metadata-only short-answer edit should preserve SR state');
+    assert.equal(updated.adaptiveReviewStateJson.reviewCount, before.adaptiveReviewStateJson.reviewCount);
+    assert.equal(updated.adaptiveReviewStateJson.dueAt, before.adaptiveReviewStateJson.dueAt);
   });
 
   test('rating a newly created flashcard updates due list and due counts', () => {
@@ -640,5 +722,59 @@ describe('recordAdaptiveMcqResult + listAdaptiveWeakQuestions', () => {
       WHERE entity_type = 'question' AND entity_id = ?
     `).get(mcq.questionId)?.c;
     assert.equal(Number(snapshotCount), 0, 'editing MCQ should clear prior question review snapshots');
+  });
+
+  test('metadata-only MCQ edit preserves adaptive state and snapshots', () => {
+    const mcq = getFixtureMcq();
+    db.recordAdaptiveMcqResult({
+      itemId: mcq.questionId,
+      result: 'incorrect',
+      partialCredit: 0,
+      timeSpentSeconds: 17,
+    });
+
+    const before = db.getQuestionById(mcq.questionId);
+    assert.ok(before.adaptiveReviewStateJson, 'precondition: adaptive state exists before metadata edit');
+
+    const beforeSnapshotCount = Number(inspector.prepare(`
+      SELECT COUNT(*) AS c
+      FROM review_snapshots
+      WHERE entity_type = 'question' AND entity_id = ?
+    `).get(mcq.questionId)?.c || 0);
+
+    const updated = db.updateQuestion({
+      questionId: before.questionId,
+      topicId: before.topicId,
+      questionType: before.questionType,
+      title: `${before.title || 'MCQ'} (retitled)`,
+      stem: before.stem,
+      modelAnswerHtml: before.modelAnswerHtml,
+      mainExplanationHtml: before.mainExplanationHtml,
+      referenceText: before.referenceText,
+      difficulty: Math.min(5, (before.difficulty || 2) + 1),
+      isBookmarked: !before.isBookmarked,
+      isFlagged: before.isFlagged,
+      choices: before.choices.map((choice, index) => ({
+        label: choice.label,
+        html: choice.html,
+        isCorrect: choice.isCorrect,
+        explanationHtml: choice.explanationHtml,
+        sortOrder: Number.isInteger(choice.sortOrder) ? choice.sortOrder : index,
+      })),
+    });
+
+    assert.ok(updated.adaptiveReviewStateJson, 'metadata-only MCQ edit should preserve adaptive state');
+    assert.equal(
+      updated.adaptiveReviewStateJson.weaknessScore,
+      before.adaptiveReviewStateJson.weaknessScore,
+      'metadata-only edit should keep existing adaptive score'
+    );
+
+    const afterSnapshotCount = Number(inspector.prepare(`
+      SELECT COUNT(*) AS c
+      FROM review_snapshots
+      WHERE entity_type = 'question' AND entity_id = ?
+    `).get(mcq.questionId)?.c || 0);
+    assert.equal(afterSnapshotCount, beforeSnapshotCount, 'metadata-only MCQ edit should not delete snapshots');
   });
 });

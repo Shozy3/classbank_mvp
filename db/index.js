@@ -761,6 +761,51 @@ function normalizeFlashcardPayload(payload, { requireFlashcardId }) {
   };
 }
 
+function choicesAreEquivalent(existingChoices, normalizedChoices) {
+  if (!Array.isArray(existingChoices) || !Array.isArray(normalizedChoices)) {
+    return false;
+  }
+
+  if (existingChoices.length !== normalizedChoices.length) {
+    return false;
+  }
+
+  for (let i = 0; i < existingChoices.length; i += 1) {
+    const existing = existingChoices[i];
+    const next = normalizedChoices[i];
+    if ((existing?.label ?? null) !== (next?.label ?? null)) return false;
+    if ((existing?.html ?? '') !== (next?.html ?? '')) return false;
+    if (Boolean(existing?.isCorrect) !== Boolean(next?.isCorrect)) return false;
+    if ((existing?.explanationHtml ?? '') !== (next?.explanationHtml ?? '')) return false;
+    if ((existing?.sortOrder ?? i) !== (next?.sortOrder ?? i)) return false;
+  }
+
+  return true;
+}
+
+function hasSubstantiveQuestionChanges(existing, normalized) {
+  if (existing.topicId !== normalized.topicId) return true;
+  if (existing.questionType !== normalized.questionType) return true;
+  if ((existing.stem ?? '') !== (normalized.stem ?? '')) return true;
+  if ((existing.modelAnswerHtml ?? null) !== (normalized.modelAnswerHtml ?? null)) return true;
+  if ((existing.mainExplanationHtml ?? '') !== (normalized.mainExplanationHtml ?? '')) return true;
+  if ((existing.referenceText ?? '') !== (normalized.referenceText ?? '')) return true;
+  if (!choicesAreEquivalent(existing.choices, normalized.choices)) return true;
+  return false;
+}
+
+function hasSubstantiveFlashcardChanges(existing, normalized) {
+  if (existing.topicId !== normalized.topicId) return true;
+  if ((existing.frontHtml ?? '') !== (normalized.frontHtml ?? '')) return true;
+  if ((existing.backHtml ?? '') !== (normalized.backHtml ?? '')) return true;
+  if ((existing.referenceText ?? '') !== (normalized.referenceText ?? '')) return true;
+  return false;
+}
+
+function questionParticipatesInReviewState(questionType) {
+  return questionType === 'short_answer' || ADAPTIVE_MCQ_TYPES.has(questionType);
+}
+
 function getQuestionById(questionId) {
   if (!questionId || typeof questionId !== 'string') {
     throw new Error('questionId is required.');
@@ -960,11 +1005,14 @@ function updateQuestion(payload) {
   const txn = conn.transaction(() => {
     writeRevisionSnapshot(conn, 'question', normalized.questionId, existing);
 
+    const choicesChanged = !choicesAreEquivalent(existing.choices, normalized.choices);
+    const hasSubstantiveChanges = hasSubstantiveQuestionChanges(existing, normalized);
     const shouldResetQuestionReviewState =
-      ADAPTIVE_MCQ_TYPES.has(normalized.questionType)
-      || ADAPTIVE_MCQ_TYPES.has(existing.questionType)
-      || normalized.questionType === 'short_answer'
-      || existing.questionType === 'short_answer';
+      hasSubstantiveChanges
+      && (
+        questionParticipatesInReviewState(normalized.questionType)
+        || questionParticipatesInReviewState(existing.questionType)
+      );
 
     conn.prepare(`
       UPDATE questions
@@ -1028,22 +1076,24 @@ function updateQuestion(payload) {
       normalized.questionId
     );
 
-    conn.prepare('DELETE FROM question_choices WHERE question_id = ?').run(normalized.questionId);
+    if (choicesChanged) {
+      conn.prepare('DELETE FROM question_choices WHERE question_id = ?').run(normalized.questionId);
 
-    for (const choice of normalized.choices) {
-      conn.prepare(`
-        INSERT INTO question_choices (
-          id, question_id, label, choice_rich_text, is_correct, choice_explanation_rich_text, sort_order
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        crypto.randomUUID(),
-        normalized.questionId,
-        choice.label,
-        choice.html,
-        choice.isCorrect ? 1 : 0,
-        choice.explanationHtml,
-        choice.sortOrder
-      );
+      for (const choice of normalized.choices) {
+        conn.prepare(`
+          INSERT INTO question_choices (
+            id, question_id, label, choice_rich_text, is_correct, choice_explanation_rich_text, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          crypto.randomUUID(),
+          normalized.questionId,
+          choice.label,
+          choice.html,
+          choice.isCorrect ? 1 : 0,
+          choice.explanationHtml,
+          choice.sortOrder
+        );
+      }
     }
 
     if (shouldResetQuestionReviewState) {
@@ -1099,6 +1149,8 @@ function updateFlashcard(payload) {
   const txn = conn.transaction(() => {
     writeRevisionSnapshot(conn, 'flashcard', normalized.flashcardId, existing);
 
+    const shouldResetFlashcardReviewState = hasSubstantiveFlashcardChanges(existing, normalized);
+
     conn.prepare(`
       UPDATE flashcards
       SET
@@ -1106,11 +1158,26 @@ function updateFlashcard(payload) {
         front_rich_text = ?,
         back_rich_text = ?,
         reference_text = ?,
-        sr_state_json = NULL,
-        due_at = NULL,
-        last_reviewed_at = NULL,
-        review_count = 0,
-        lapse_count = 0,
+        sr_state_json = CASE
+          WHEN ? = 1 THEN NULL
+          ELSE sr_state_json
+        END,
+        due_at = CASE
+          WHEN ? = 1 THEN NULL
+          ELSE due_at
+        END,
+        last_reviewed_at = CASE
+          WHEN ? = 1 THEN NULL
+          ELSE last_reviewed_at
+        END,
+        review_count = CASE
+          WHEN ? = 1 THEN 0
+          ELSE review_count
+        END,
+        lapse_count = CASE
+          WHEN ? = 1 THEN 0
+          ELSE lapse_count
+        END,
         is_bookmarked = ?,
         is_flagged = ?,
         updated_at = ?,
@@ -1121,6 +1188,11 @@ function updateFlashcard(payload) {
       normalized.frontHtml,
       normalized.backHtml,
       normalized.referenceText,
+      shouldResetFlashcardReviewState ? 1 : 0,
+      shouldResetFlashcardReviewState ? 1 : 0,
+      shouldResetFlashcardReviewState ? 1 : 0,
+      shouldResetFlashcardReviewState ? 1 : 0,
+      shouldResetFlashcardReviewState ? 1 : 0,
       normalized.isBookmarked ? 1 : 0,
       normalized.isFlagged ? 1 : 0,
       now,
@@ -1128,10 +1200,12 @@ function updateFlashcard(payload) {
       normalized.flashcardId
     );
 
-    conn.prepare(`
-      DELETE FROM review_snapshots
-      WHERE entity_type = 'flashcard' AND entity_id = ?
-    `).run(normalized.flashcardId);
+    if (shouldResetFlashcardReviewState) {
+      conn.prepare(`
+        DELETE FROM review_snapshots
+        WHERE entity_type = 'flashcard' AND entity_id = ?
+      `).run(normalized.flashcardId);
+    }
   });
 
   txn();
