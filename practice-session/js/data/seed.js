@@ -341,6 +341,14 @@ function readLocalReviewHistory() {
  * Returns null if the course is not found or yields 0 questions.
  */
 function buildFromConfig(config) {
+  const modeLabels = {
+    free_practice: 'Free Practice',
+    timed_block: 'Timed Block',
+    review_incorrect: 'Review Incorrect',
+    spaced_review: 'Spaced Review',
+  };
+  const modeLabel = modeLabels[config.mode] || 'Free Practice';
+
   if (Array.isArray(config.preloadedQuestions) && config.preloadedQuestions.length > 0) {
     let preloaded = config.preloadedQuestions;
 
@@ -368,7 +376,7 @@ function buildFromConfig(config) {
       sessionId: `session-${Date.now()}`,
       courseLabel: `${courseCode} — ${courseName}`,
       topicLabel: config.topicLabel || 'Selected Topics',
-      modeLabel: 'Free Practice',
+      modeLabel,
       questions,
       initialOverrides,
     };
@@ -427,8 +435,6 @@ function buildFromConfig(config) {
 
   const courseLabel = `${course.course_code} — ${course.course_name}`;
   const topicLabel  = deriveTopicLabel(course, unitIdSet, topicIdSet);
-  const modeLabel   = 'Free Practice';
-
   return {
     sessionId: `session-${Date.now()}`,
     courseLabel,

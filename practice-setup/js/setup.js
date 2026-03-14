@@ -507,7 +507,7 @@ function renderMetaFiltersSection() {
 function renderModeSection() {
   const modes = [
     { id: 'free_practice',    icon: '▷', label: 'Free Practice',   helper: null,                                     enabled: true  },
-    { id: 'timed_block',      icon: '⏱', label: 'Timed Block',     helper: 'Available once timer system is added.',  enabled: false },
+    { id: 'timed_block',      icon: '⏱', label: 'Timed Block',     helper: 'Use per-block timer to simulate test pacing.', enabled: true },
     { id: 'review_incorrect', icon: '↩', label: 'Review Incorrect', helper: 'Filters to previously missed items.',     enabled: true  },
     { id: 'spaced_review',    icon: '◈', label: 'Spaced Review',    helper: 'Requires spaced-repetition data.',       enabled: false },
   ];
@@ -548,7 +548,7 @@ function renderTimerSection() {
   const timers = [
     { id: 'none',         label: 'No Timer',    enabled: true  },
     { id: 'per_question', label: 'Per Question', enabled: false },
-    { id: 'per_block',    label: 'Per Block',    enabled: false },
+    { id: 'per_block',    label: 'Per Block',    enabled: true },
   ];
 
   const items = timers.map(t => `
@@ -575,7 +575,7 @@ function renderTimerSection() {
       <div class="setup-checkbox-group" id="timer-radios" role="radiogroup" aria-label="Timer mode">
         ${items}
       </div>
-      <div class="timer-group-helper">Timed modes require the timer system.</div>
+      <div class="timer-group-helper">Per-block timer is available for timed sessions.</div>
     </div>
   `;
 }
@@ -878,6 +878,20 @@ function attachListeners() {
         unseenToggle.checked = false;
         unseenToggle.setAttribute('aria-checked', 'false');
       }
+      void recomputeCount();
+      return;
+    }
+
+    if (SetupState.mode === 'timed_block') {
+      SetupState.timerMode = 'per_block';
+      const perBlockRadio = document.getElementById('timer-per_block');
+      if (perBlockRadio) {
+        perBlockRadio.checked = true;
+      }
+      return;
+    }
+
+    if (SetupState.mode === 'spaced_review') {
       void recomputeCount();
     }
   });

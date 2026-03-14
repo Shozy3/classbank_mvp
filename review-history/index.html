@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassBank - Review History</title>
+  <link rel="stylesheet" href="../practice-session/css/tokens.css">
+  <link rel="stylesheet" href="../practice-session/css/reset.css">
+  <link rel="stylesheet" href="../practice-session/css/layout.css">
+  <link rel="stylesheet" href="css/review-history.css">
+</head>
+<body>
+  <div id="app-shell">
+    <nav id="app-nav" aria-label="Main navigation">
+      <div class="nav-logo">Class<span>Bank</span></div>
+
+      <a class="nav-link" href="../library/index.html">
+        <span class="nav-link-icon">▤</span> Library
+      </a>
+      <a class="nav-link" href="../authoring/index.html">
+        <span class="nav-link-icon">✎</span> Authoring
+      </a>
+      <a class="nav-link" href="../practice-setup/index.html">
+        <span class="nav-link-icon">◈</span> Practice Setup
+      </a>
+      <a class="nav-link" href="../practice-session/index.html">
+        <span class="nav-link-icon">▷</span> Practice Session
+      </a>
+      <a class="nav-link active" href="#" aria-current="page">
+        <span class="nav-link-icon">◷</span> Review History
+      </a>
+      <a class="nav-link" href="../stats-dashboard/index.html">
+        <span class="nav-link-icon">▦</span> Stats Dashboard
+      </a>
+    </nav>
+
+    <main id="session-root" aria-label="Review history">
+      <header id="history-header">
+        <div>
+          <div class="header-kicker">ClassBank</div>
+          <h1>Review History</h1>
+        </div>
+        <p id="history-subtitle">Browse prior sessions and inspect outcomes.</p>
+      </header>
+
+      <section id="history-body">
+        <div id="history-list-pane" aria-label="Recent sessions">
+          <div class="pane-head">
+            <h2>Recent Sessions</h2>
+            <span id="history-count" aria-live="polite"></span>
+          </div>
+          <div id="history-list" role="listbox" aria-label="Session history list"></div>
+          <div id="history-empty" class="empty-state" hidden>
+            <h3>No history yet</h3>
+            <p>Complete a practice session to populate this list.</p>
+            <a class="action-link" href="../practice-setup/index.html">Start a practice session</a>
+          </div>
+        </div>
+
+        <aside id="history-detail-pane" aria-label="Session details">
+          <div id="history-detail-empty" class="detail-empty">
+            <h3>Select a session</h3>
+            <p>Session details will appear here.</p>
+          </div>
+          <div id="history-detail" hidden></div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/review-history.js"></script>
+</body>
+</html>

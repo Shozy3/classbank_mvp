@@ -7,7 +7,14 @@
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
-    "build": "electron-builder --mac"
+    "build": "electron-builder --mac",
+    "rebuild:native:node": "npm rebuild better-sqlite3",
+    "rebuild:native:electron": "electron-rebuild -f -w better-sqlite3",
+    "test": "npm run rebuild:native:node && node --test tests/**/*.test.mjs",
+    "smoke:electron-db": "npm run rebuild:native:electron && node temp/pw-runner/electron-db-smoke.mjs",
+    "smoke:authoring-rich": "npm run rebuild:native:electron && node temp/pw-runner/authoring-rich-smoke.mjs",
+    "at:interactive": "npm run rebuild:native:electron && cd temp/pw-runner && node interactive-at-runner.mjs",
+    "verify:core": "npm test && npm run smoke:electron-db && npm run smoke:authoring-rich"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0"

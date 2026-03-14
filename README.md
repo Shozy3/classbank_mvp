@@ -41,12 +41,30 @@ All navigator states — unanswered, correct, incorrect, skipped, bookmarked, fl
 |---|---|---|
 | Practice Setup | ✅ Working prototype | Full filter/mode UI, writes to `sessionStorage` |
 | Practice Session | ✅ Working prototype | All 4 question types, reveal, strikeout, bookmark, flag, timer, navigator |
-| Library | 🔲 Not started | Spec in [`docs/screens/library.md`](docs/screens/library.md) |
-| Authoring | 🔲 Not started | Spec in [`docs/screens/authoring.md`](docs/screens/authoring.md) |
-| Review History | 🔲 Not started | Spec in [`docs/screens/review-history.md`](docs/screens/review-history.md) |
-| Stats Dashboard | 🔲 Not started | Spec in [`docs/screens/stats-dashboard.md`](docs/screens/stats-dashboard.md) |
+| Library | ✅ Working prototype | Hierarchy CRUD, list/preview, search/filter, item actions |
+| Authoring | ✅ Working prototype | Question/flashcard create-edit-duplicate-delete with rich editor |
+| Review History | ✅ Working prototype | Session list + detail pane from persisted session data |
+| Stats Dashboard | ✅ Working prototype | Streak-first summary cards from persisted session data |
 
-**Persistence:** [`schema.sql`](schema.sql) is complete and ready. The UI currently runs against a hardcoded in-memory fixture. The Electron shell and SQLite wiring are the next milestone.
+**Persistence:** SQLite is wired through Electron IPC and used by Library/Authoring/Session flows.
+
+---
+
+## Verification
+
+Run the full core verification suite:
+
+```bash
+npm run verify:core
+```
+
+Individual commands:
+
+```bash
+npm test
+npm run smoke:electron-db
+npm run smoke:authoring-rich
+```
 
 ---
 
@@ -133,7 +151,7 @@ See the open GitHub issues for the full implementation roadmap:
 3. **Session persistence** — write results, bookmarks, flags, review state to DB
 4. **Library screen** — three-pane content browser
 5. **Authoring screen** — full rich-text question and flashcard editor
-6. **Review History + Stats Dashboard** — session log and progress overview
+6. **Review History + Stats Dashboard** — implemented; refine acceptance coverage and UI polish
 
 ---
 

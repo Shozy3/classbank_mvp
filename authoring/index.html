@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassBank - Authoring</title>
+  <link rel="stylesheet" href="../practice-session/css/tokens.css">
+  <link rel="stylesheet" href="../practice-session/css/reset.css">
+  <link rel="stylesheet" href="../practice-session/css/layout.css">
+  <link rel="stylesheet" href="css/authoring.css">
+</head>
+<body>
+  <div id="app-shell">
+    <nav id="app-nav" aria-label="Main navigation">
+      <div class="nav-logo">Class<span>Bank</span></div>
+
+      <a class="nav-link" href="../library/index.html">
+        <span class="nav-link-icon">▤</span> Library
+      </a>
+      <a class="nav-link active" href="#" aria-current="page">
+        <span class="nav-link-icon">✎</span> Authoring
+      </a>
+      <a class="nav-link" href="../practice-setup/index.html">
+        <span class="nav-link-icon">◈</span> Practice Setup
+      </a>
+      <a class="nav-link" href="../practice-session/index.html">
+        <span class="nav-link-icon">▷</span> Practice Session
+      </a>
+      <a class="nav-link" href="../review-history/index.html">
+        <span class="nav-link-icon">◷</span> Review History
+      </a>
+      <a class="nav-link" href="../stats-dashboard/index.html">
+        <span class="nav-link-icon">▦</span> Stats Dashboard
+      </a>
+    </nav>
+
+    <div id="authoring-root">
+      <header id="authoring-header">
+        <div>
+          <div class="header-kicker">ClassBank</div>
+          <div class="header-title">Authoring</div>
+        </div>
+        <div id="save-status" class="save-status idle">Idle</div>
+      </header>
+
+      <div id="authoring-body">
+        <aside id="authoring-sidebar"></aside>
+        <main id="authoring-editor"></main>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/authoring.js"></script>
+</body>
+</html>

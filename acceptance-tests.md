@@ -215,3 +215,30 @@
 - contrast remains readable
 - correct/incorrect/partial states remain distinguishable
 - no major visual breakage
+
+---
+
+## AT-016 Review history browsing
+
+### Steps
+1. Complete at least one practice session with revealed items
+2. Open Review History
+3. Select the most recent session row
+
+### Expected
+- most recent session appears first
+- selecting a row opens detail pane
+- detail pane includes mode, duration, and outcome counts
+
+---
+
+## AT-017 Stats dashboard streak and summary
+
+### Steps
+1. Complete sessions on at least two days
+2. Open Stats Dashboard
+
+### Expected
+- primary streak card is visible
+- supporting summary cards render (recent sessions and answered metrics)
+- dashboard handles partial data without crashing

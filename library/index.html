@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassBank — Library</title>
+  <link rel="stylesheet" href="css/library.css">
+</head>
+<body>
+
+<div id="app-shell">
+
+  <!-- Nav sidebar -->
+  <nav id="app-nav" aria-label="Main navigation">
+    <div class="nav-logo">Class<span>Bank</span></div>
+    <a class="nav-link active" href="../library/index.html" aria-current="page">
+      <span class="nav-link-icon">▤</span> Library
+    </a>
+    <a class="nav-link" href="#" tabindex="-1">
+      <span class="nav-link-icon">✎</span> Authoring
+    </a>
+    <a class="nav-link" href="../practice-setup/index.html">
+      <span class="nav-link-icon">◈</span> Practice Setup
+    </a>
+    <a class="nav-link" href="../review-history/index.html">
+      <span class="nav-link-icon">◷</span> Review History
+    </a>
+    <a class="nav-link" href="../stats-dashboard/index.html">
+      <span class="nav-link-icon">▦</span> Stats
+    </a>
+  </nav>
+
+  <!-- Library workspace -->
+  <div id="library-workspace">
+
+    <!-- Left: hierarchy tree pane -->
+    <aside id="hierarchy-pane" aria-label="Course hierarchy">
+      <div class="pane-header">
+        <span class="pane-title">Library</span>
+        <button id="btn-create-course" class="btn-icon-text" title="Create new course">
+          <span class="btn-icon">+</span> Course
+        </button>
+      </div>
+      <div id="hierarchy-tree" role="tree" aria-label="Courses"></div>
+      <div id="hierarchy-empty" class="empty-state" hidden>
+        <p>No courses yet.</p>
+        <button class="link-btn" id="btn-create-course-empty">Create your first course</button>
+      </div>
+    </aside>
+
+    <!-- Center: item list pane -->
+    <main id="list-pane" aria-label="Content items">
+      <div class="pane-header list-toolbar" id="list-toolbar">
+        <div class="toolbar-search">
+          <input
+            type="search"
+            id="search-input"
+            placeholder="Search items…"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Search items"
+          >
+        </div>
+        <div class="toolbar-filters">
+          <div class="filter-group" id="type-filter" role="group" aria-label="Item type filter">
+            <button class="filter-pill active" data-type="all">All</button>
+            <button class="filter-pill" data-type="single_best">MCQ</button>
+            <button class="filter-pill" data-type="true_false">T/F</button>
+            <button class="filter-pill" data-type="short_answer">SA</button>
+            <button class="filter-pill" data-type="flashcard">Flash</button>
+          </div>
+          <div class="filter-group" id="status-filter" role="group" aria-label="Status filter">
+            <button class="filter-pill active" data-status="all">All</button>
+            <button class="filter-pill" data-status="bookmarked">🔖 Bookmarked</button>
+            <button class="filter-pill" data-status="flagged">⚑ Flagged</button>
+          </div>
+        </div>
+        <span id="item-count" class="item-count" aria-live="polite"></span>
+      </div>
+
+      <!-- Bulk action bar (hidden until selection) -->
+      <div id="bulk-bar" class="bulk-bar" hidden aria-live="polite">
+        <span id="bulk-count" class="bulk-count"></span>
+        <button id="btn-bulk-duplicate" class="btn-secondary btn-sm">Duplicate</button>
+        <button id="btn-bulk-move"      class="btn-secondary btn-sm">Move to…</button>
+        <button id="btn-bulk-delete"    class="btn-danger btn-sm">Delete</button>
+        <button id="btn-bulk-clear"     class="btn-ghost btn-sm">Clear selection</button>
+      </div>
+
+      <div id="item-list" role="list" aria-label="Content items"></div>
+
+      <div id="list-empty" class="empty-state" hidden>
+        <p id="empty-message">Select a topic to view its content.</p>
+      </div>
+    </main>
+
+    <!-- Right: preview pane -->
+    <aside id="preview-pane" aria-label="Item preview" hidden>
+      <div class="pane-header">
+        <span class="pane-title">Preview</span>
+        <button id="btn-close-preview" class="btn-icon" title="Close preview" aria-label="Close preview">✕</button>
+      </div>
+      <div id="preview-content"></div>
+      <div id="preview-actions" class="preview-actions">
+        <button id="btn-preview-duplicate" class="btn-secondary btn-sm">Duplicate</button>
+        <button id="btn-preview-move"      class="btn-secondary btn-sm">Move to…</button>
+        <button id="btn-preview-delete"    class="btn-danger btn-sm">Delete</button>
+      </div>
+    </aside>
+
+  </div><!-- /library-workspace -->
+
+</div><!-- /app-shell -->
+
+<!-- Confirm delete modal -->
+<dialog id="modal-confirm-delete" class="modal">
+  <div class="modal-inner">
+    <h2 class="modal-title" id="delete-modal-title">Delete?</h2>
+    <p class="modal-body" id="delete-modal-body">This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-delete-cancel">Cancel</button>
+      <button class="btn-danger"    id="btn-delete-confirm">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Move items modal -->
+<dialog id="modal-move" class="modal">
+  <div class="modal-inner">
+    <h2 class="modal-title">Move to…</h2>
+    <div class="move-selects">
+      <label class="field-label">Course
+        <select id="move-select-course" class="select-input"></select>
+      </label>
+      <label class="field-label">Unit
+        <select id="move-select-unit" class="select-input"></select>
+      </label>
+      <label class="field-label">Topic
+        <select id="move-select-topic" class="select-input"></select>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-move-cancel">Cancel</button>
+      <button class="btn-primary"   id="btn-move-confirm">Move</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Inline rename input (absolute positioned, portal) -->
+<input type="text" id="inline-rename-input" class="inline-rename-input" hidden aria-label="Rename">
+
+<script src="js/state/library-state.js"></script>
+<script src="js/components/hierarchy-tree.js"></script>
+<script src="js/components/item-list.js"></script>
+<script src="js/components/preview-panel.js"></script>
+<script src="js/library.js"></script>
+</body>
+</html>
