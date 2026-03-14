@@ -648,5 +648,9 @@ describe('session history and stats APIs', () => {
     assert.ok(summary.recentSessions);
     assert.ok(summary.answered);
     assert.ok(summary.due);
+    assert.ok(summary.adaptiveReview);
+    assert.ok(typeof summary.adaptiveReview.weakQuestionCount === 'number');
+    assert.ok(Array.isArray(summary.adaptiveReview.topQuestions));
+    assert.ok(Array.isArray(summary.weakTopics));
   });
 });

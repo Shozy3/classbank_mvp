@@ -349,6 +349,45 @@ function buildFromConfig(config) {
   };
   const modeLabel = modeLabels[config.mode] || 'Free Practice';
 
+  // ---------------------------------------------------------------------------
+  // Spaced Review: map due SR items (flashcards + short-answer) to session shape
+  // ---------------------------------------------------------------------------
+  if (config.mode === 'spaced_review' &&
+      Array.isArray(config.preloadedSrItems) &&
+      config.preloadedSrItems.length > 0) {
+
+    let mapped = config.preloadedSrItems.map((item) => ({
+      questionId:          item.itemId,
+      flashcardId:         item.contentType === 'flashcard' ? item.itemId : null,
+      questionType:        item.contentType === 'flashcard' ? 'flashcard' : 'short_answer',
+      stem:                item.promptHtml,
+      choices:             [],
+      mainExplanationHtml: item.contentType === 'flashcard'
+        ? (item.answerHtml || '')
+        : (item.explanationHtml || ''),
+      referenceText:       item.referenceText || '',
+      modelAnswerHtml:     item.contentType === 'flashcard'
+        ? (item.answerHtml || null)
+        : (item.answerHtml || null),
+    }));
+
+    if (config.shuffleQuestions) {
+      mapped = fisherYates(mapped);
+    }
+
+    const initialOverrides = {};
+    for (const q of mapped) initialOverrides[q.questionId] = {};
+
+    return {
+      sessionId:   `session-${Date.now()}`,
+      courseLabel: `${config.courseCode || 'Course'} — ${config.courseName || 'Spaced Review'}`,
+      topicLabel:  config.topicLabel || 'Due Items',
+      modeLabel:   'Spaced Review',
+      questions:   mapped,
+      initialOverrides,
+    };
+  }
+
   if (Array.isArray(config.preloadedQuestions) && config.preloadedQuestions.length > 0) {
     let preloaded = config.preloadedQuestions;
 

@@ -34,6 +34,8 @@ function makeItemState(question, overrides = {}) {
     result: null,   // null | 'correct' | 'partial' | 'incorrect'
     partialCredit: null,
     selfRating: null,
+    srRatingSyncState: 'idle', // idle | saving | error
+    srRatingError: '',
 
     // Timing fields used for session persistence
     enteredAtEpochMs: null,
@@ -57,6 +59,7 @@ export const SessionState = {
   items:         [],
   timerSeconds:  0,
   isTimerRunning: false,
+  completedAt: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -66,6 +69,7 @@ export function initState() {
   SessionState.currentIndex  = 0;
   SessionState.timerSeconds  = 0;
   SessionState.isTimerRunning = true;
+  SessionState.completedAt = null;
 
   SessionState.items = SESSION_DATA.questions.map((q) => {
     const override = SESSION_DATA.initialOverrides[q.questionId] ?? {};
@@ -148,8 +152,8 @@ function computeResult(item, question) {
     return 'partial';
   }
 
-  if (type === 'short_answer') {
-    // No auto-grade; reveal model answer only
+  if (type === 'short_answer' || type === 'flashcard') {
+    // No auto-grade; reveal model answer / card back only
     return null;
   }
 
@@ -288,7 +292,7 @@ export function reveal() {
   commitElapsedForItem(item);
 
   // If they hadn't answered, mark as answered-via-reveal for nav display
-  if (!item.isAnswered && question.questionType !== 'short_answer') {
+  if (!item.isAnswered && question.questionType !== 'short_answer' && question.questionType !== 'flashcard') {
     // result is 'incorrect' from computeResult; item stays not-answered
     // but isRevealed takes over for nav rendering
   }
@@ -325,6 +329,78 @@ export function goNext() {
   goTo(SessionState.currentIndex + 1);
 }
 
+/**
+ * Set the self-rating for a revealed item (Again / Hard / Good / Easy).
+ */
 export function setSelfRating(itemIdx, rating) {
-  SessionState.items[itemIdx].selfRating = rating;
+  const item = SessionState.items[itemIdx];
+  if (!item || !item.isRevealed) return;
+  const valid = new Set(['Again', 'Hard', 'Good', 'Easy']);
+  if (!valid.has(rating)) return;
+  item.selfRating = rating;
+}
+
+export function markSessionCompleted(timestamp = new Date().toISOString()) {
+  SessionState.completedAt = timestamp;
+  SessionState.isTimerRunning = false;
+}
+
+export function isSessionComplete() {
+  if (!SessionState.items.length) return false;
+  return SessionState.items.every((item) => item.isRevealed);
+}
+
+export function getSessionSummary() {
+  const totalItems = SessionState.items.length;
+  let answeredCount = 0;
+  let revealedCount = 0;
+  let skippedCount = 0;
+  let correctCount = 0;
+  let partialCount = 0;
+  let incorrectCount = 0;
+  let bookmarkedCount = 0;
+  let flaggedCount = 0;
+  const missedIndexes = [];
+
+  SessionState.items.forEach((item, idx) => {
+    if (item.isAnswered) answeredCount++;
+    if (item.isRevealed) revealedCount++;
+    if (item.isSkipped) skippedCount++;
+    if (item.isBookmarked) bookmarkedCount++;
+    if (item.isFlagged) flaggedCount++;
+
+    if (item.result === 'correct') {
+      correctCount++;
+    } else if (item.result === 'partial') {
+      partialCount++;
+      missedIndexes.push(idx);
+    } else if (item.result === 'incorrect') {
+      incorrectCount++;
+      missedIndexes.push(idx);
+    }
+  });
+
+  const gradedCount = correctCount + partialCount + incorrectCount;
+  const scoreDenominator = revealedCount;
+  const scorePercent = scoreDenominator > 0
+    ? Number((((correctCount + (partialCount * 0.5)) / scoreDenominator) * 100).toFixed(1))
+    : null;
+
+  return {
+    totalItems,
+    answeredCount,
+    revealedCount,
+    unrevealedCount: Math.max(totalItems - revealedCount, 0),
+    skippedCount,
+    correctCount,
+    partialCount,
+    incorrectCount,
+    gradedCount,
+    scoreDenominator,
+    bookmarkedCount,
+    flaggedCount,
+    missedIndexes,
+    canReviewIncorrect: missedIndexes.length > 0,
+    scorePercent,
+  };
 }

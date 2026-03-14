@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('api', {
   listDueSpacedReviewItems: (p) => ipcRenderer.invoke('db:listDueSpacedReviewItems', p),
   getSpacedReviewDueCounts: (p) => ipcRenderer.invoke('db:getSpacedReviewDueCounts', p),
   recordSpacedReviewRating: (p) => ipcRenderer.invoke('db:recordSpacedReviewRating', p),
+  recordAdaptiveMcqResult: (p) => ipcRenderer.invoke('db:recordAdaptiveMcqResult', p),
+  listAdaptiveWeakQuestions: (p) => ipcRenderer.invoke('db:listAdaptiveWeakQuestions', p),
   createBackup: (p) => ipcRenderer.invoke('db:createBackup', p),
   restoreBackup: (p) => ipcRenderer.invoke('db:restoreBackup', p),
 });

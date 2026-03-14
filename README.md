@@ -15,6 +15,11 @@ Configure your session with cascading course/unit/topic filters, question type t
 |---|---|
 | ![Practice setup – initial](docs/screenshots/setup-initial.png) | ![Practice setup – ready to start](docs/screenshots/setup-ready.png) |
 
+### Practice Setup — Mode controls
+Session mode radios now include Free Practice, Timed Block, Review Incorrect, and Spaced Review with DB-aware helper text.
+
+![Practice setup – session modes](docs/screenshots/setup-session-modes.png)
+
 ### Practice Session — Question types
 
 | Single best answer (unanswered) | Revealed — correct |
@@ -28,6 +33,14 @@ Configure your session with cascading course/unit/topic filters, question type t
 ### Per-choice explanation breakdown
 ![Session – per-choice explanations](docs/screenshots/session-per-choice-explanations.png)
 
+### Spaced Review flow (flashcards + summary)
+
+| Flashcard front | Flashcard back revealed |
+|---|---|
+| ![Spaced review – flashcard front](docs/screenshots/session-spaced-review-flashcard-front.png) | ![Spaced review – flashcard revealed](docs/screenshots/session-spaced-review-flashcard-revealed.png) |
+
+![Spaced review – session summary](docs/screenshots/session-summary-spaced-review.png)
+
 ### Question navigator
 All navigator states — unanswered, correct, incorrect, skipped, bookmarked, flagged, current.
 
@@ -39,14 +52,25 @@ All navigator states — unanswered, correct, incorrect, skipped, bookmarked, fl
 
 | Screen | Status | Notes |
 |---|---|---|
-| Practice Setup | ✅ Working prototype | Full filter/mode UI, writes to `sessionStorage` |
-| Practice Session | ✅ Working prototype | All 4 question types, reveal, strikeout, bookmark, flag, timer, navigator |
+| Practice Setup | ✅ Working prototype | Full filter/mode UI, spaced-review mode, adaptive-weak filter rules, writes to `sessionStorage` |
+| Practice Session | ✅ Working prototype | MCQ + short-answer + flashcard support, reveal/rating loop, session summary, missed-item handoff |
 | Library | ✅ Working prototype | Hierarchy CRUD, list/preview, search/filter, item actions |
 | Authoring | ✅ Working prototype | Question/flashcard create-edit-duplicate-delete with rich editor |
-| Review History | ✅ Working prototype | Session list + detail pane from persisted session data |
-| Stats Dashboard | ✅ Working prototype | Streak-first summary cards from persisted session data |
+| Review History | ✅ Working prototype | Session list/detail plus adaptive weak-item review signals |
+| Stats Dashboard | ✅ Working prototype | Streak-first summary cards plus adaptive weak MCQ signal metric |
 
 **Persistence:** SQLite is wired through Electron IPC and used by Library/Authoring/Session flows.
+
+---
+
+## Release Update (March 2026)
+
+- Added an adaptive MCQ review engine in the DB layer with per-question weakness scoring and weak-item query support.
+- Added spaced review mode in setup/session, including flashcard front/back reveal and recall rating controls.
+- Added session completion summary with outcome totals and one-click handoff to Review Incorrect sessions.
+- Consolidated setup filter-rule behavior so `incorrectOnly`, `adaptiveWeakOnly`, and `unseenOnly` remain mutually exclusive.
+- Updated Review History and Stats Dashboard surfaces to expose adaptive weak-question indicators.
+- Expanded automated coverage with new suites for session completion, setup contract behavior, and setup filter rules.
 
 ---
 
@@ -97,7 +121,7 @@ npm run smoke:authoring-rich
 
 ---
 
-## Supported question types
+## Supported practice item types
 
 | Type | Selection | Strikeout | Reveal | Rating |
 |---|---|---|---|---|
@@ -105,6 +129,7 @@ npm run smoke:authoring-rich
 | Multi-select MCQ | Multiple choices | ✅ | ✅ | — |
 | True / False | Binary | — | ✅ | — |
 | Short answer | Text input | — | ✅ | Again / Hard / Good / Easy |
+| Flashcard | Recall from front side | — | Reveal back side | Again / Hard / Good / Easy |
 
 ---
 

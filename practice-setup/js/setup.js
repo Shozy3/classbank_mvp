@@ -14,6 +14,7 @@
  */
 
 import { COURSE_DATA } from '../../practice-session/js/data/course-data.js';
+import { applyFilterRules } from './filter-rules.mjs';
 
 // ---------------------------------------------------------------------------
 // State
@@ -47,6 +48,7 @@ const SetupState = {
   bookmarkedOnly:   false,
   flaggedOnly:      false,
   incorrectOnly:    false,
+  adaptiveWeakOnly: false,
   unseenOnly:       false,
   questionCount:    0,           // clamped effective count (≤ maxCount)
   requestedCount:   0,           // last count explicitly typed by user
@@ -56,6 +58,8 @@ const SetupState = {
   mode:             'free_practice',
   timerMode:        'none',
   usingDb:          false,
+  srDueCounts:      { totalDue: 0, questionDue: 0, flashcardDue: 0 },
+  adaptiveWeakCount: 0,
 };
 
 // ---------------------------------------------------------------------------
@@ -98,6 +102,7 @@ function toFilterPayload() {
     bookmarkedOnly: SetupState.bookmarkedOnly,
     flaggedOnly: SetupState.flaggedOnly,
     incorrectOnly: SetupState.incorrectOnly,
+    adaptiveWeakOnly: SetupState.adaptiveWeakOnly,
     unseenOnly: SetupState.unseenOnly,
   };
 }
@@ -124,9 +129,13 @@ async function queryMatchingQuestions(options = {}) {
     return null;
   }
 
+  const shouldFilterAdaptiveWeak = SetupState.adaptiveWeakOnly;
+
   const payload = {
     ...toFilterPayload(),
-    randomSample: Number.isInteger(options.randomSample) ? options.randomSample : null,
+    randomSample: shouldFilterAdaptiveWeak
+      ? null
+      : (Number.isInteger(options.randomSample) ? options.randomSample : null),
   };
 
   const rows = await window.api.getQuestions(payload);
@@ -134,7 +143,65 @@ async function queryMatchingQuestions(options = {}) {
     throw new Error('db:getQuestions returned unexpected payload.');
   }
 
-  return rows;
+  if (!shouldFilterAdaptiveWeak) {
+    return rows;
+  }
+
+  const adaptiveWeakRows = await queryAdaptiveWeakQuestions();
+  const adaptiveWeakIds = new Set(adaptiveWeakRows.map((row) => row.questionId).filter((id) => typeof id === 'string'));
+  let filteredRows = rows.filter((row) => adaptiveWeakIds.has(row.questionId));
+
+  if (Number.isInteger(options.randomSample) && options.randomSample > 0 && filteredRows.length > options.randomSample) {
+    const shuffled = [...filteredRows];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    filteredRows = shuffled.slice(0, options.randomSample);
+  }
+
+  return filteredRows;
+}
+
+async function querySpacedReviewDue() {
+  if (!SetupState.usingDb || !window.api?.getSpacedReviewDueCounts) {
+    return { totalDue: 0, questionDue: 0, flashcardDue: 0 };
+  }
+  try {
+    const counts = await window.api.getSpacedReviewDueCounts({ topicIds: [...SetupState.topicIds] });
+    if (!counts || typeof counts !== 'object') return { totalDue: 0, questionDue: 0, flashcardDue: 0 };
+    return {
+      totalDue:     Number(counts.totalDue)     || 0,
+      questionDue:  Number(counts.questionDue)  || 0,
+      flashcardDue: Number(counts.flashcardDue) || 0,
+    };
+  } catch {
+    return { totalDue: 0, questionDue: 0, flashcardDue: 0 };
+  }
+}
+
+async function loadSpacedReviewDueItems() {
+  if (!SetupState.usingDb || !window.api?.listDueSpacedReviewItems) return [];
+  try {
+    const items = await window.api.listDueSpacedReviewItems({ topicIds: [...SetupState.topicIds] });
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+async function queryAdaptiveWeakQuestions() {
+  if (!SetupState.usingDb || !window.api?.listAdaptiveWeakQuestions) return [];
+
+  try {
+    const rows = await window.api.listAdaptiveWeakQuestions({
+      topicIds: [...SetupState.topicIds],
+      limit: 500,
+    });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +289,15 @@ async function initSetup() {
 
   SetupState.questionCount  = SetupState.maxCount;
   SetupState.requestedCount = SetupState.maxCount;
+
+  if (SetupState.usingDb) {
+    try {
+      SetupState.srDueCounts = await querySpacedReviewDue();
+      SetupState.adaptiveWeakCount = (await queryAdaptiveWeakQuestions()).length;
+    } catch (error) {
+      console.error('[setup] Failed to load SR due counts.', error);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -499,17 +575,47 @@ function renderMetaFiltersSection() {
           </label>
         </div>
 
+        <div class="toggle-row">
+          <div class="toggle-label-group">
+            <span class="toggle-label">Adaptive Weak Only</span>
+            <span class="toggle-helper-text">DB-only MCQ weakness signals (${SetupState.adaptiveWeakCount})</span>
+          </div>
+          <label class="toggle-switch" aria-label="Adaptive weak only">
+            <input
+              type="checkbox"
+              id="toggle-adaptive-weak"
+              class="toggle-input"
+              ${SetupState.adaptiveWeakOnly ? 'checked' : ''}
+              ${SetupState.usingDb ? '' : 'disabled'}
+              role="switch"
+              aria-checked="${SetupState.adaptiveWeakOnly}"
+            >
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
       </div>
     </div>
   `;
 }
 
 function renderModeSection() {
+  const hasDue    = SetupState.srDueCounts.totalDue > 0;
+  const srEnabled = SetupState.usingDb && hasDue;
+  const reviewIncorrectHelper = SetupState.adaptiveWeakCount > 0
+    ? `Filters to previously missed items. ${SetupState.adaptiveWeakCount} adaptive weak MCQ${SetupState.adaptiveWeakCount === 1 ? '' : 's'} detected.`
+    : 'Filters to previously missed items.';
+  const srHelper  = !SetupState.usingDb
+    ? 'Requires persisted session data.'
+    : hasDue
+      ? `${SetupState.srDueCounts.totalDue} item${SetupState.srDueCounts.totalDue === 1 ? '' : 's'} due for review.`
+      : 'No items currently due.';
+
   const modes = [
-    { id: 'free_practice',    icon: '▷', label: 'Free Practice',   helper: null,                                     enabled: true  },
-    { id: 'timed_block',      icon: '⏱', label: 'Timed Block',     helper: 'Use per-block timer to simulate test pacing.', enabled: true },
-    { id: 'review_incorrect', icon: '↩', label: 'Review Incorrect', helper: 'Filters to previously missed items.',     enabled: true  },
-    { id: 'spaced_review',    icon: '◈', label: 'Spaced Review',    helper: 'Requires spaced-repetition data.',       enabled: false },
+    { id: 'free_practice',    icon: '▷', label: 'Free Practice',    helper: null,                                          enabled: true      },
+    { id: 'timed_block',      icon: '⏱', label: 'Timed Block',      helper: 'Use per-block or per-question timer.',        enabled: true      },
+    { id: 'review_incorrect', icon: '↩', label: 'Review Incorrect',  helper: reviewIncorrectHelper,                         enabled: true      },
+    { id: 'spaced_review',    icon: '◈', label: 'Spaced Review',     helper: srHelper,                                     enabled: srEnabled },
   ];
 
   const items = modes.map(m => `
@@ -546,8 +652,8 @@ function renderModeSection() {
 
 function renderTimerSection() {
   const timers = [
-    { id: 'none',         label: 'No Timer',    enabled: true  },
-    { id: 'per_question', label: 'Per Question', enabled: false },
+    { id: 'none',         label: 'No Timer',    enabled: true },
+    { id: 'per_question', label: 'Per Question', enabled: true },
     { id: 'per_block',    label: 'Per Block',    enabled: true },
   ];
 
@@ -640,10 +746,13 @@ function renderSummarySection() {
 // ---------------------------------------------------------------------------
 
 function updateSummary() {
-  const count      = SetupState.questionCount;
-  const maxCount   = SetupState.maxCount;
-  const warn       = maxCount === 0;
-  const label      = count === 1 ? 'question' : 'questions';
+  const count    = SetupState.questionCount;
+  const maxCount = SetupState.maxCount;
+  const warn     = maxCount === 0;
+  const isSR     = SetupState.mode === 'spaced_review';
+  const label    = isSR
+    ? (count === 1 ? 'item due' : 'items due')
+    : (count === 1 ? 'question' : 'questions');
 
   const countLine  = document.getElementById('summary-count-line');
   const detailLine = document.getElementById('summary-detail');
@@ -660,7 +769,11 @@ function updateSummary() {
 
   // Dynamic detail line — derives from live state, not hardcoded
   if (detailLine) {
-    detailLine.textContent = `${COURSE.course_code} — ${MODE_LABELS[SetupState.mode] || 'Free Practice'}`;
+    const modeLabel = MODE_LABELS[SetupState.mode] || 'Free Practice';
+    const adaptiveLabel = SetupState.usingDb
+      ? ` · ${SetupState.adaptiveWeakCount} adaptive weak MCQ${SetupState.adaptiveWeakCount === 1 ? '' : 's'}`
+      : '';
+    detailLine.textContent = `${COURSE.course_code} — ${modeLabel}${adaptiveLabel}`;
   }
 
   if (countTotal) countTotal.textContent = String(maxCount);
@@ -676,24 +789,34 @@ function updateSummary() {
   }
 
   if (warnSlot) {
-    warnSlot.innerHTML = warn ? `
-      <div class="summary-warning" role="alert">
-        <span class="summary-warning-icon">⚠</span>
-        <span>No questions match the current filters. Adjust your selection to continue.</span>
-      </div>
-    ` : '';
+    let warnHtml = '';
+    if (warn) {
+      const warnMsg = isSR
+        ? 'No items are currently due for spaced review. Complete more content or wait for items to become due.'
+        : 'No questions match the current filters. Adjust your selection to continue.';
+      warnHtml = `
+        <div class="summary-warning" role="alert">
+          <span class="summary-warning-icon">⚠</span>
+          <span>${warnMsg}</span>
+        </div>
+      `;
+    }
+    warnSlot.innerHTML = warnHtml;
   }
 
   if (startBtn) startBtn.disabled = warn;
 
   if (countInput) {
     countInput.max      = String(maxCount);
-    countInput.disabled = warn;
-    if (maxCount > 0 && parseInt(countInput.value, 10) > maxCount) {
-      countInput.value = String(maxCount);
-    }
-    if (maxCount > 0 && parseInt(countInput.value, 10) < 1) {
-      countInput.value = '1';
+    // SR sessions always use all due items — disable count editing
+    countInput.disabled = warn || isSR;
+    if (!isSR) {
+      if (maxCount > 0 && parseInt(countInput.value, 10) > maxCount) {
+        countInput.value = String(maxCount);
+      }
+      if (maxCount > 0 && parseInt(countInput.value, 10) < 1) {
+        countInput.value = '1';
+      }
     }
   }
 }
@@ -742,6 +865,33 @@ function applyUnitCascade(unitId, checked) {
 // ---------------------------------------------------------------------------
 
 function attachListeners() {
+  function syncFilterControlsFromState() {
+    const incorrectToggle = document.getElementById('toggle-incorrect');
+    if (incorrectToggle) {
+      incorrectToggle.checked = SetupState.incorrectOnly;
+      incorrectToggle.setAttribute('aria-checked', String(SetupState.incorrectOnly));
+    }
+
+    const adaptiveToggle = document.getElementById('toggle-adaptive-weak');
+    if (adaptiveToggle) {
+      adaptiveToggle.checked = SetupState.adaptiveWeakOnly;
+      adaptiveToggle.setAttribute('aria-checked', String(SetupState.adaptiveWeakOnly));
+    }
+
+    const unseenToggle = document.getElementById('toggle-unseen');
+    if (unseenToggle) {
+      unseenToggle.checked = SetupState.unseenOnly;
+      unseenToggle.setAttribute('aria-checked', String(SetupState.unseenOnly));
+    }
+
+    const freeRadio = document.getElementById('mode-free_practice');
+    const reviewIncorrectRadio = document.getElementById('mode-review_incorrect');
+    if (freeRadio && reviewIncorrectRadio) {
+      freeRadio.checked = SetupState.mode === 'free_practice';
+      reviewIncorrectRadio.checked = SetupState.mode === 'review_incorrect';
+    }
+  }
+
   // Unit checkboxes
   document.getElementById('unit-checkboxes')?.addEventListener('change', (e) => {
     const cb = e.target.closest('.unit-checkbox');
@@ -827,36 +977,34 @@ function attachListeners() {
 
   // Incorrect Only toggle
   document.getElementById('toggle-incorrect')?.addEventListener('change', (e) => {
-    SetupState.incorrectOnly = e.target.checked;
-    e.target.setAttribute('aria-checked', String(e.target.checked));
-    if (SetupState.incorrectOnly) {
-      SetupState.unseenOnly = false;
-      const unseenToggle = document.getElementById('toggle-unseen');
-      if (unseenToggle) {
-        unseenToggle.checked = false;
-        unseenToggle.setAttribute('aria-checked', 'false');
-      }
-    }
+    const next = applyFilterRules(SetupState, { type: 'toggleIncorrect', checked: e.target.checked });
+    SetupState.incorrectOnly = next.incorrectOnly;
+    SetupState.adaptiveWeakOnly = next.adaptiveWeakOnly;
+    SetupState.unseenOnly = next.unseenOnly;
+    SetupState.mode = next.mode;
+    syncFilterControlsFromState();
+    void recomputeCount();
+  });
+
+  // Adaptive Weak Only toggle
+  document.getElementById('toggle-adaptive-weak')?.addEventListener('change', (e) => {
+    const next = applyFilterRules(SetupState, { type: 'toggleAdaptiveWeak', checked: e.target.checked });
+    SetupState.incorrectOnly = next.incorrectOnly;
+    SetupState.adaptiveWeakOnly = next.adaptiveWeakOnly;
+    SetupState.unseenOnly = next.unseenOnly;
+    SetupState.mode = next.mode;
+    syncFilterControlsFromState();
     void recomputeCount();
   });
 
   // Unseen Only toggle
   document.getElementById('toggle-unseen')?.addEventListener('change', (e) => {
-    SetupState.unseenOnly = e.target.checked;
-    e.target.setAttribute('aria-checked', String(e.target.checked));
-    if (SetupState.unseenOnly) {
-      SetupState.incorrectOnly = false;
-      if (SetupState.mode === 'review_incorrect') {
-        SetupState.mode = 'free_practice';
-        const freeRadio = document.getElementById('mode-free_practice');
-        if (freeRadio) freeRadio.checked = true;
-      }
-      const incorrectToggle = document.getElementById('toggle-incorrect');
-      if (incorrectToggle) {
-        incorrectToggle.checked = false;
-        incorrectToggle.setAttribute('aria-checked', 'false');
-      }
-    }
+    const next = applyFilterRules(SetupState, { type: 'toggleUnseen', checked: e.target.checked });
+    SetupState.incorrectOnly = next.incorrectOnly;
+    SetupState.adaptiveWeakOnly = next.adaptiveWeakOnly;
+    SetupState.unseenOnly = next.unseenOnly;
+    SetupState.mode = next.mode;
+    syncFilterControlsFromState();
     void recomputeCount();
   });
 
@@ -864,20 +1012,14 @@ function attachListeners() {
   document.getElementById('mode-radios')?.addEventListener('change', (e) => {
     const rb = e.target.closest('.mode-radio');
     if (!rb) return;
-    SetupState.mode = rb.value;
+    const next = applyFilterRules(SetupState, { type: 'setMode', mode: rb.value });
+    SetupState.mode = next.mode;
+    SetupState.incorrectOnly = next.incorrectOnly;
+    SetupState.adaptiveWeakOnly = next.adaptiveWeakOnly;
+    SetupState.unseenOnly = next.unseenOnly;
+    syncFilterControlsFromState();
+
     if (SetupState.mode === 'review_incorrect') {
-      SetupState.incorrectOnly = true;
-      SetupState.unseenOnly = false;
-      const incorrectToggle = document.getElementById('toggle-incorrect');
-      if (incorrectToggle) {
-        incorrectToggle.checked = true;
-        incorrectToggle.setAttribute('aria-checked', 'true');
-      }
-      const unseenToggle = document.getElementById('toggle-unseen');
-      if (unseenToggle) {
-        unseenToggle.checked = false;
-        unseenToggle.setAttribute('aria-checked', 'false');
-      }
       void recomputeCount();
       return;
     }
@@ -892,7 +1034,12 @@ function attachListeners() {
     }
 
     if (SetupState.mode === 'spaced_review') {
+      // SR sessions don't use countdown timers
+      SetupState.timerMode = 'none';
+      const noneRadio = document.getElementById('timer-none');
+      if (noneRadio) noneRadio.checked = true;
       void recomputeCount();
+      return;
     }
   });
 
@@ -916,7 +1063,17 @@ function attachListeners() {
 async function recomputeCount() {
   let next = 0;
 
-  if (SetupState.usingDb) {
+  if (SetupState.mode === 'spaced_review') {
+    if (SetupState.usingDb) {
+      try {
+        SetupState.srDueCounts = await querySpacedReviewDue();
+        next = SetupState.srDueCounts.totalDue;
+      } catch (error) {
+        console.error('[setup] Failed to recompute SR due count.', error);
+        next = 0;
+      }
+    }
+  } else if (SetupState.usingDb) {
     try {
       lastQuestionQueryResult = await queryMatchingQuestions();
       next = lastQuestionQueryResult.length;
@@ -932,12 +1089,20 @@ async function recomputeCount() {
 
   SetupState.maxCount = next;
 
-  // Clamp to available pool; restore toward requestedCount when pool expands.
-  // Fallback to `next` guards the edge case where requestedCount is still 0
-  // (initSetup found no questions), but a filter change later yields a non-empty pool.
-  if (next === 0) {
+  if (SetupState.usingDb) {
+    SetupState.adaptiveWeakCount = (await queryAdaptiveWeakQuestions()).length;
+  } else {
+    SetupState.adaptiveWeakCount = 0;
+  }
+
+  // SR sessions always use all due items — no random sub-sampling.
+  if (SetupState.mode === 'spaced_review') {
+    SetupState.questionCount  = next;
+    SetupState.requestedCount = next;
+  } else if (next === 0) {
     SetupState.questionCount = 0;
   } else {
+    // Clamp to available pool; restore toward requestedCount when pool expands.
     SetupState.questionCount = Math.min(SetupState.requestedCount, next);
     if (SetupState.questionCount < 1) SetupState.questionCount = next;
   }
@@ -979,11 +1144,18 @@ async function startSession() {
   if (SetupState.maxCount === 0) return;
 
   let preloadedQuestions = null;
+  let preloadedSrItems   = null;
+
   if (SetupState.usingDb) {
     try {
-      preloadedQuestions = await queryMatchingQuestions({ randomSample: SetupState.questionCount });
+      if (SetupState.mode === 'spaced_review') {
+        preloadedSrItems = await loadSpacedReviewDueItems();
+        if (!preloadedSrItems || preloadedSrItems.length === 0) return;
+      } else {
+        preloadedQuestions = await queryMatchingQuestions({ randomSample: SetupState.questionCount });
+      }
     } catch (error) {
-      console.error('[setup] Failed to preload DB questions; session will fallback to fixture data.', error);
+      console.error('[setup] Failed to preload session content; session will fallback to fixture data.', error);
     }
   }
 
@@ -999,6 +1171,7 @@ async function startSession() {
     bookmarkedOnly:   SetupState.bookmarkedOnly,
     flaggedOnly:      SetupState.flaggedOnly,
     incorrectOnly:    SetupState.incorrectOnly,
+    adaptiveWeakOnly: SetupState.adaptiveWeakOnly,
     unseenOnly:       SetupState.unseenOnly,
     questionCount:    SetupState.questionCount,
     shuffleQuestions: SetupState.shuffleQuestions,
@@ -1006,6 +1179,7 @@ async function startSession() {
     mode:             SetupState.mode,
     timerMode:        SetupState.timerMode,
     preloadedQuestions,
+    preloadedSrItems,
   };
 
   sessionStorage.setItem('classbank_session_config', JSON.stringify(config));

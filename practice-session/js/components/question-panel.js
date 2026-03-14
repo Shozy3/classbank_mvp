@@ -16,6 +16,7 @@ const TYPE_LABELS = {
   multi_select: 'Multi-Select',
   true_false:   'True / False',
   short_answer: 'Short Answer',
+  flashcard:    'Flashcard',
 };
 
 const TYPE_CSS_CLASS = {
@@ -23,6 +24,7 @@ const TYPE_CSS_CLASS = {
   multi_select: 'type-multi-select',
   true_false:   'type-true-false',
   short_answer: 'type-short-answer',
+  flashcard:    'type-flashcard',
 };
 
 /**
@@ -99,6 +101,8 @@ export function renderQuestionPanel(containerEl, state) {
 
   if (question.questionType === 'short_answer') {
     bodyHtml = renderShortAnswer(item, question);
+  } else if (question.questionType === 'flashcard') {
+    bodyHtml = renderFlashcardFront(item);
   } else {
     bodyHtml = renderChoices(item, question);
   }
@@ -127,6 +131,17 @@ export function renderQuestionPanel(containerEl, state) {
 // ---------------------------------------------------------------------------
 // Renderers
 // ---------------------------------------------------------------------------
+
+function renderFlashcardFront(item) {
+  const hint = item.isRevealed
+    ? '<div class="flashcard-reveal-hint">Back side is open in the explanation panel.</div>'
+    : '<div class="flashcard-reveal-hint">When ready, reveal the back side to rate your recall.</div>';
+  return `
+    <div class="question-response-shell flashcard-front">
+      ${hint}
+    </div>
+  `;
+}
 
 function renderChoices(item, question) {
   const isMulti = question.questionType === 'multi_select';

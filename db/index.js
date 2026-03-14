@@ -30,6 +30,21 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const ADAPTIVE_MCQ_TYPES = new Set(['single_best', 'multi_select', 'true_false']);
+const ADAPTIVE_WEAKNESS_MIN = 0;
+const ADAPTIVE_WEAKNESS_MAX = 1;
+const ADAPTIVE_DEFAULT_THRESHOLD = 0.45;
+
+const ADAPTIVE_RULES = {
+  incorrectPenalty: 0.24,
+  partialPenalty: 0.14,
+  slowCorrectPenalty: 0.06,
+  fastCorrectRelief: 0.08,
+  repeatedCorrectRelief: 0.03,
+  slowSecondsThreshold: 75,
+  fastSecondsThreshold: 25,
+};
+
 function normalizeOperation(value) {
   return value === 'finalizeSession' ? 'finalizeSession' : 'saveProgress';
 }
@@ -945,6 +960,12 @@ function updateQuestion(payload) {
   const txn = conn.transaction(() => {
     writeRevisionSnapshot(conn, 'question', normalized.questionId, existing);
 
+    const shouldResetQuestionReviewState =
+      ADAPTIVE_MCQ_TYPES.has(normalized.questionType)
+      || ADAPTIVE_MCQ_TYPES.has(existing.questionType)
+      || normalized.questionType === 'short_answer'
+      || existing.questionType === 'short_answer';
+
     conn.prepare(`
       UPDATE questions
       SET
@@ -959,27 +980,27 @@ function updateQuestion(payload) {
         is_bookmarked = ?,
         is_flagged = ?,
         adaptive_review_state_json = CASE
-          WHEN ? = 'short_answer' THEN NULL
+          WHEN ? = 1 THEN NULL
           ELSE adaptive_review_state_json
         END,
         times_seen = CASE
-          WHEN ? = 'short_answer' THEN 0
+          WHEN ? = 1 THEN 0
           ELSE times_seen
         END,
         times_correct = CASE
-          WHEN ? = 'short_answer' THEN 0
+          WHEN ? = 1 THEN 0
           ELSE times_correct
         END,
         times_incorrect = CASE
-          WHEN ? = 'short_answer' THEN 0
+          WHEN ? = 1 THEN 0
           ELSE times_incorrect
         END,
         last_result = CASE
-          WHEN ? = 'short_answer' THEN NULL
+          WHEN ? = 1 THEN NULL
           ELSE last_result
         END,
         last_used_at = CASE
-          WHEN ? = 'short_answer' THEN NULL
+          WHEN ? = 1 THEN NULL
           ELSE last_used_at
         END,
         updated_at = ?,
@@ -996,12 +1017,12 @@ function updateQuestion(payload) {
       normalized.difficulty,
       normalized.isBookmarked ? 1 : 0,
       normalized.isFlagged ? 1 : 0,
-      normalized.questionType,
-      normalized.questionType,
-      normalized.questionType,
-      normalized.questionType,
-      normalized.questionType,
-      normalized.questionType,
+      shouldResetQuestionReviewState ? 1 : 0,
+      shouldResetQuestionReviewState ? 1 : 0,
+      shouldResetQuestionReviewState ? 1 : 0,
+      shouldResetQuestionReviewState ? 1 : 0,
+      shouldResetQuestionReviewState ? 1 : 0,
+      shouldResetQuestionReviewState ? 1 : 0,
       now,
       now,
       normalized.questionId
@@ -1025,7 +1046,7 @@ function updateQuestion(payload) {
       );
     }
 
-    if (normalized.questionType === 'short_answer') {
+    if (shouldResetQuestionReviewState) {
       conn.prepare(`
         DELETE FROM review_snapshots
         WHERE entity_type = 'question' AND entity_id = ?
@@ -1654,7 +1675,7 @@ function getStatsDashboardSummary() {
     FROM practice_sessions
   `).get();
 
-  const weakTopics = conn.prepare(`
+  const weakTopicsFromSessions = conn.prepare(`
     SELECT
       t.id AS topic_id,
       t.name AS topic_name,
@@ -1671,8 +1692,65 @@ function getStatsDashboardSummary() {
     ORDER BY (1.0 * (incorrect_count + (partial_count * 0.5)) / revealed_count) DESC,
       revealed_count DESC,
       t.name COLLATE NOCASE ASC
-    LIMIT 3
   `).all();
+
+  const adaptiveWeakQuestions = listAdaptiveWeakQuestions({ limit: 500 });
+  const weakTopicMap = new Map();
+
+  for (const topic of weakTopicsFromSessions) {
+    const revealedCount = Number(topic.revealed_count ?? 0);
+    const incorrectCount = Number(topic.incorrect_count ?? 0);
+    const partialCount = Number(topic.partial_count ?? 0);
+    const sessionWeaknessPercent = revealedCount > 0
+      ? Number((((incorrectCount + (partialCount * 0.5)) / revealedCount) * 100).toFixed(1))
+      : 0;
+
+    weakTopicMap.set(topic.topic_id, {
+      topicId: topic.topic_id,
+      topicName: topic.topic_name,
+      revealedCount,
+      incorrectCount,
+      partialCount,
+      weaknessPercent: sessionWeaknessPercent,
+      adaptiveWeakQuestionCount: 0,
+      adaptiveWeaknessPercent: 0,
+      combinedWeaknessPercent: sessionWeaknessPercent,
+    });
+  }
+
+  for (const question of adaptiveWeakQuestions) {
+    const existing = weakTopicMap.get(question.topicId) || {
+      topicId: question.topicId,
+      topicName: question.topicName,
+      revealedCount: 0,
+      incorrectCount: 0,
+      partialCount: 0,
+      weaknessPercent: 0,
+      adaptiveWeakQuestionCount: 0,
+      adaptiveWeaknessPercent: 0,
+      combinedWeaknessPercent: 0,
+    };
+
+    const nextAdaptiveCount = existing.adaptiveWeakQuestionCount + 1;
+    const nextAdaptiveAvg = Number((((existing.adaptiveWeaknessPercent * existing.adaptiveWeakQuestionCount) + (question.weaknessScore * 100)) / nextAdaptiveCount).toFixed(1));
+
+    existing.adaptiveWeakQuestionCount = nextAdaptiveCount;
+    existing.adaptiveWeaknessPercent = nextAdaptiveAvg;
+    existing.combinedWeaknessPercent = Number(Math.max(existing.weaknessPercent, nextAdaptiveAvg).toFixed(1));
+    weakTopicMap.set(question.topicId, existing);
+  }
+
+  const weakTopics = [...weakTopicMap.values()]
+    .sort((a, b) => {
+      if (b.combinedWeaknessPercent !== a.combinedWeaknessPercent) {
+        return b.combinedWeaknessPercent - a.combinedWeaknessPercent;
+      }
+      if (b.adaptiveWeakQuestionCount !== a.adaptiveWeakQuestionCount) {
+        return b.adaptiveWeakQuestionCount - a.adaptiveWeakQuestionCount;
+      }
+      return a.topicName.localeCompare(b.topicName);
+    })
+    .slice(0, 3);
 
   const dueCounts = getSpacedReviewDueCounts();
   const revealedCount = Number(totals?.revealed_count ?? 0);
@@ -1703,14 +1781,18 @@ function getStatsDashboardSummary() {
       questionDue: Number(dueCounts?.questionDue ?? 0),
       flashcardDue: Number(dueCounts?.flashcardDue ?? 0),
     },
-    weakTopics: weakTopics.map((topic) => ({
-      topicId: topic.topic_id,
-      topicName: topic.topic_name,
-      revealedCount: Number(topic.revealed_count ?? 0),
-      incorrectCount: Number(topic.incorrect_count ?? 0),
-      partialCount: Number(topic.partial_count ?? 0),
-      weaknessPercent: Number((((Number(topic.incorrect_count ?? 0) + (Number(topic.partial_count ?? 0) * 0.5)) / Number(topic.revealed_count ?? 1)) * 100).toFixed(1)),
-    })),
+    weakTopics,
+    adaptiveReview: {
+      weakQuestionCount: adaptiveWeakQuestions.length,
+      topQuestions: adaptiveWeakQuestions.slice(0, 5).map((q) => ({
+        questionId: q.questionId,
+        topicId: q.topicId,
+        topicName: q.topicName,
+        questionType: q.questionType,
+        weaknessPercent: Number((q.weaknessScore * 100).toFixed(1)),
+        lastResult: q.lastResult,
+      })),
+    },
   };
 }
 
@@ -2164,6 +2246,12 @@ function computeNextSrState(previousState, selfRating) {
   const prevEase = Number.isFinite(Number(prev.easeFactor))
     ? Number(prev.easeFactor)
     : 2.5;
+  const prevReviewCount = Number.isFinite(Number(prev.reviewCount))
+    ? Math.max(0, Number(prev.reviewCount))
+    : 0;
+  const prevLapseCount = Number.isFinite(Number(prev.lapseCount))
+    ? Math.max(0, Number(prev.lapseCount))
+    : 0;
 
   let intervalDays = 1;
   let easeFactor = prevEase;
@@ -2182,6 +2270,7 @@ function computeNextSrState(previousState, selfRating) {
   }
 
   const now = new Date();
+  const reviewedAt = now.toISOString();
   const due = new Date(now.getTime() + (intervalDays * 24 * 60 * 60 * 1000));
 
   return {
@@ -2189,7 +2278,10 @@ function computeNextSrState(previousState, selfRating) {
     easeFactor: Number(easeFactor.toFixed(2)),
     dueAt: due.toISOString(),
     lastRating: selfRating,
-    updatedAt: now.toISOString(),
+    reviewCount: prevReviewCount + 1,
+    lapseCount: prevLapseCount + (selfRating === 'Again' ? 1 : 0),
+    lastReviewedAt: reviewedAt,
+    updatedAt: reviewedAt,
   };
 }
 
@@ -2200,6 +2292,249 @@ function parseJsonOrNull(value) {
   } catch {
     return null;
   }
+}
+
+function clampAdaptiveWeakness(value) {
+  const next = Number(value);
+  if (!Number.isFinite(next)) return ADAPTIVE_WEAKNESS_MIN;
+  if (next < ADAPTIVE_WEAKNESS_MIN) return ADAPTIVE_WEAKNESS_MIN;
+  if (next > ADAPTIVE_WEAKNESS_MAX) return ADAPTIVE_WEAKNESS_MAX;
+  return next;
+}
+
+function normalizeAdaptiveResult(value) {
+  if (value !== 'correct' && value !== 'partial' && value !== 'incorrect' && value !== 'unanswered') {
+    throw new Error('result must be one of correct, partial, incorrect, unanswered.');
+  }
+  return value;
+}
+
+function normalizeAdaptiveMinWeakness(value) {
+  if (value == null) return ADAPTIVE_DEFAULT_THRESHOLD;
+  const next = Number(value);
+  if (!Number.isFinite(next)) return ADAPTIVE_DEFAULT_THRESHOLD;
+  return clampAdaptiveWeakness(next);
+}
+
+function toAdaptiveSummary(state) {
+  const weaknessScore = clampAdaptiveWeakness(state?.weaknessScore);
+  return {
+    weaknessScore,
+    seenCount: Number.isFinite(Number(state?.seenCount)) ? Math.max(0, Number(state.seenCount)) : 0,
+    incorrectCount: Number.isFinite(Number(state?.incorrectCount)) ? Math.max(0, Number(state.incorrectCount)) : 0,
+    partialCount: Number.isFinite(Number(state?.partialCount)) ? Math.max(0, Number(state.partialCount)) : 0,
+    slowCorrectCount: Number.isFinite(Number(state?.slowCorrectCount)) ? Math.max(0, Number(state.slowCorrectCount)) : 0,
+    fastCorrectCount: Number.isFinite(Number(state?.fastCorrectCount)) ? Math.max(0, Number(state.fastCorrectCount)) : 0,
+    consecutiveCorrectCount: Number.isFinite(Number(state?.consecutiveCorrectCount))
+      ? Math.max(0, Number(state.consecutiveCorrectCount))
+      : 0,
+    averageTimeSeconds: Number.isFinite(Number(state?.averageTimeSeconds))
+      ? Number(state.averageTimeSeconds)
+      : null,
+    lastReviewedAt: state?.lastReviewedAt || null,
+    lastResult: state?.lastResult || null,
+    needsWork: weaknessScore >= ADAPTIVE_DEFAULT_THRESHOLD,
+  };
+}
+
+function computeNextAdaptiveMcqState(previousState, { result, partialCredit, timeSpentSeconds, reviewedAt }) {
+  const prior = previousState && typeof previousState === 'object' ? previousState : {};
+  const priorSeenCount = Number.isFinite(Number(prior.seenCount)) ? Math.max(0, Number(prior.seenCount)) : 0;
+  const priorCorrectCount = Number.isFinite(Number(prior.correctCount)) ? Math.max(0, Number(prior.correctCount)) : 0;
+  const priorIncorrectCount = Number.isFinite(Number(prior.incorrectCount)) ? Math.max(0, Number(prior.incorrectCount)) : 0;
+  const priorPartialCount = Number.isFinite(Number(prior.partialCount)) ? Math.max(0, Number(prior.partialCount)) : 0;
+  const priorSlowCorrectCount = Number.isFinite(Number(prior.slowCorrectCount)) ? Math.max(0, Number(prior.slowCorrectCount)) : 0;
+  const priorFastCorrectCount = Number.isFinite(Number(prior.fastCorrectCount)) ? Math.max(0, Number(prior.fastCorrectCount)) : 0;
+  const priorConsecutiveCorrectCount = Number.isFinite(Number(prior.consecutiveCorrectCount))
+    ? Math.max(0, Number(prior.consecutiveCorrectCount))
+    : 0;
+  const priorWeakness = clampAdaptiveWeakness(prior.weaknessScore);
+  const priorAvgTime = Number.isFinite(Number(prior.averageTimeSeconds)) ? Number(prior.averageTimeSeconds) : null;
+  const normalizedTime = normalizeInteger(timeSpentSeconds, 0);
+  const normalizedPartial = partialCredit == null ? null : Number(partialCredit);
+
+  let weaknessDelta = 0;
+  let consecutiveCorrectCount = priorConsecutiveCorrectCount;
+  let correctCount = priorCorrectCount;
+  let incorrectCount = priorIncorrectCount;
+  let partialCount = priorPartialCount;
+  let slowCorrectCount = priorSlowCorrectCount;
+  let fastCorrectCount = priorFastCorrectCount;
+
+  if (result === 'incorrect') {
+    weaknessDelta += ADAPTIVE_RULES.incorrectPenalty;
+    incorrectCount += 1;
+    consecutiveCorrectCount = 0;
+  } else if (result === 'partial') {
+    weaknessDelta += ADAPTIVE_RULES.partialPenalty;
+    partialCount += 1;
+    consecutiveCorrectCount = 0;
+  } else if (result === 'correct') {
+    correctCount += 1;
+    consecutiveCorrectCount += 1;
+
+    if (normalizedTime >= ADAPTIVE_RULES.slowSecondsThreshold) {
+      weaknessDelta += ADAPTIVE_RULES.slowCorrectPenalty;
+      slowCorrectCount += 1;
+    } else if (normalizedTime <= ADAPTIVE_RULES.fastSecondsThreshold) {
+      weaknessDelta -= ADAPTIVE_RULES.fastCorrectRelief;
+      fastCorrectCount += 1;
+      if (consecutiveCorrectCount >= 3) {
+        weaknessDelta -= ADAPTIVE_RULES.repeatedCorrectRelief;
+      }
+    }
+  }
+
+  const nextSeenCount = priorSeenCount + 1;
+  const nextAverageTime = priorAvgTime == null
+    ? normalizedTime
+    : Number((((priorAvgTime * priorSeenCount) + normalizedTime) / nextSeenCount).toFixed(2));
+
+  const nextWeaknessScore = clampAdaptiveWeakness(Number((priorWeakness + weaknessDelta).toFixed(4)));
+  const nextState = {
+    version: 1,
+    weaknessScore: nextWeaknessScore,
+    seenCount: nextSeenCount,
+    correctCount,
+    incorrectCount,
+    partialCount,
+    slowCorrectCount,
+    fastCorrectCount,
+    consecutiveCorrectCount,
+    averageTimeSeconds: nextAverageTime,
+    lastReviewedAt: reviewedAt,
+    lastResult: result,
+    lastPartialCredit: normalizedPartial,
+    updatedAt: reviewedAt,
+  };
+
+  return {
+    nextState,
+    summary: toAdaptiveSummary(nextState),
+  };
+}
+
+function recordAdaptiveMcqResult({ itemId, result, partialCredit, timeSpentSeconds } = {}) {
+  if (!itemId || typeof itemId !== 'string') {
+    throw new Error('itemId is required.');
+  }
+
+  const normalizedResult = normalizeAdaptiveResult(result);
+  const conn = ensureDbOpen();
+  const reviewedAt = nowIso();
+
+  const existing = conn.prepare(`
+    SELECT id, question_type, adaptive_review_state_json
+    FROM questions
+    WHERE id = ?
+  `).get(itemId);
+
+  if (!existing) throw new Error(`Question not found: ${itemId}`);
+  if (!ADAPTIVE_MCQ_TYPES.has(existing.question_type)) {
+    throw new Error('Only MCQ question types support adaptive MCQ review state updates.');
+  }
+
+  const priorState = parseJsonOrNull(existing.adaptive_review_state_json);
+  const { nextState, summary } = computeNextAdaptiveMcqState(priorState, {
+    result: normalizedResult,
+    partialCredit,
+    timeSpentSeconds,
+    reviewedAt,
+  });
+
+  conn.prepare(`
+    UPDATE questions
+    SET
+      adaptive_review_state_json = ?,
+      updated_at = ?
+    WHERE id = ?
+  `).run(JSON.stringify(nextState), reviewedAt, itemId);
+
+  conn.prepare(`
+    INSERT INTO review_snapshots (
+      id, entity_type, entity_id, reviewed_at, result, time_spent_seconds, self_rating, state_payload_json
+    ) VALUES (?, 'question', ?, ?, ?, ?, NULL, ?)
+  `).run(
+    crypto.randomUUID(),
+    itemId,
+    reviewedAt,
+    normalizedResult,
+    normalizeInteger(timeSpentSeconds),
+    JSON.stringify(nextState)
+  );
+
+  return {
+    ok: true,
+    itemId,
+    questionType: existing.question_type,
+    reviewedAt,
+    state: nextState,
+    summary,
+  };
+}
+
+function listAdaptiveWeakQuestions({ topicIds, limit, minWeakness } = {}) {
+  const conn = ensureDbOpen();
+  const validTopicIds = Array.isArray(topicIds)
+    ? topicIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : [];
+  const maxItems = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 500) : 100;
+  const minScore = normalizeAdaptiveMinWeakness(minWeakness);
+
+  const where = [
+    `q.question_type IN (${[...ADAPTIVE_MCQ_TYPES].map(() => '?').join(', ')})`,
+    'q.adaptive_review_state_json IS NOT NULL',
+  ];
+  const params = [...ADAPTIVE_MCQ_TYPES];
+
+  if (validTopicIds.length > 0) {
+    where.push(`q.topic_id IN (${validTopicIds.map(() => '?').join(', ')})`);
+    params.push(...validTopicIds);
+  }
+
+  const rows = conn.prepare(`
+    SELECT
+      q.id,
+      q.topic_id,
+      q.question_type,
+      q.title,
+      q.stem_rich_text,
+      q.adaptive_review_state_json,
+      q.last_result,
+      q.last_used_at,
+      t.name AS topic_name
+    FROM questions q
+    JOIN topics t ON t.id = q.topic_id
+    WHERE ${where.join(' AND ')}
+    ORDER BY q.id ASC
+  `).all(...params);
+
+  return rows
+    .map((row) => {
+      const state = parseJsonOrNull(row.adaptive_review_state_json);
+      const summary = toAdaptiveSummary(state);
+      return {
+        questionId: row.id,
+        topicId: row.topic_id,
+        topicName: row.topic_name,
+        questionType: row.question_type,
+        title: row.title,
+        stem: row.stem_rich_text,
+        weaknessScore: summary.weaknessScore,
+        needsWork: summary.weaknessScore >= minScore,
+        seenCount: summary.seenCount,
+        incorrectCount: summary.incorrectCount,
+        partialCount: summary.partialCount,
+        slowCorrectCount: summary.slowCorrectCount,
+        fastCorrectCount: summary.fastCorrectCount,
+        averageTimeSeconds: summary.averageTimeSeconds,
+        lastResult: summary.lastResult || row.last_result || null,
+        lastReviewedAt: summary.lastReviewedAt || row.last_used_at || null,
+      };
+    })
+    .filter((row) => row.weaknessScore >= minScore)
+    .sort((a, b) => b.weaknessScore - a.weaknessScore || b.incorrectCount - a.incorrectCount)
+    .slice(0, maxItems);
 }
 
 function isDueDate(dueAt) {
@@ -2281,8 +2616,8 @@ function listDueSpacedReviewItems({ topicIds, limit } = {}) {
         referenceText: row.reference_text || '',
         dueAt: state?.dueAt || null,
         srState: state,
-        reviewCount: 0,
-        lapseCount: 0,
+        reviewCount: Number.isFinite(Number(state?.reviewCount)) ? Number(state.reviewCount) : 0,
+        lapseCount: Number.isFinite(Number(state?.lapseCount)) ? Number(state.lapseCount) : 0,
         lastReviewedAt: state?.lastReviewedAt || null,
       };
     })
@@ -2357,7 +2692,7 @@ function recordSpacedReviewRating({ contentType, itemId, selfRating, result, tim
     `).run(
       JSON.stringify(nextState),
       nextState.dueAt,
-      reviewedAt,
+      nextState.lastReviewedAt || reviewedAt,
       rating,
       reviewedAt,
       itemId
@@ -2400,7 +2735,6 @@ function recordSpacedReviewRating({ contentType, itemId, selfRating, result, tim
 
   const priorState = parseJsonOrNull(existing.adaptive_review_state_json);
   const nextState = computeNextSrState(priorState, rating);
-  nextState.lastReviewedAt = reviewedAt;
 
   conn.prepare(`
     UPDATE questions
@@ -2569,6 +2903,8 @@ module.exports = {
   listDueSpacedReviewItems,
   getSpacedReviewDueCounts,
   recordSpacedReviewRating,
+  recordAdaptiveMcqResult,
+  listAdaptiveWeakQuestions,
   createBackup,
   restoreBackup,
 };

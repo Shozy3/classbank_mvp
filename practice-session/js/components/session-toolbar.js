@@ -42,11 +42,14 @@ export function renderToolbar(containerEl, state) {
   const isLast     = idx === total - 1;
   const isRevealed = item.isRevealed;
   const isShort    = question.questionType === 'short_answer';
+  const isFlashcard = question.questionType === 'flashcard';
 
   // Reveal button label
   const revealLabel = isRevealed
-    ? isShort ? 'Model Answer Open' : 'Explanation Open'
-    : isShort ? 'Reveal Answer' : 'Reveal';
+    ? (isShort || isFlashcard) ? 'Back Side Open' : 'Explanation Open'
+    : isShort    ? 'Reveal Answer'
+    : isFlashcard ? 'Reveal Back Side'
+    : 'Reveal';
 
   const revealClass = isRevealed ? 'btn-state' : 'btn-primary';
 
@@ -87,7 +90,7 @@ export function renderToolbar(containerEl, state) {
         class="btn ${revealClass}"
         data-action="reveal"
         ${isRevealed ? 'disabled' : ''}
-        title="${isShort ? 'Reveal model answer' : 'Reveal answer and explanation'}"
+        title="${isShort ? 'Reveal model answer' : isFlashcard ? 'Reveal flashcard back side' : 'Reveal answer and explanation'}"
       >${revealLabel}</button>
     </div>
 

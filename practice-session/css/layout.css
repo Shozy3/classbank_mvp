@@ -106,6 +106,12 @@
   background: var(--bg-app);
 }
 
+#session-root.summary-visible #session-body,
+#session-root.summary-visible .toolbar,
+#session-root.summary-visible #navigator {
+  display: none;
+}
+
 /* --------------------------------------------------------------------------
    Session Header — course info + timer + progress
    -------------------------------------------------------------------------- */
@@ -265,6 +271,13 @@
   overflow: hidden;
 }
 
+#session-summary {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-6);
+}
+
 /* --------------------------------------------------------------------------
    Question Panel — left side
    Left panel fills full width before reveal, then shrinks to give room.
@@ -388,5 +401,15 @@
 
   .header-state-detail {
     max-width: 150px;
+  }
+
+  #session-summary {
+    padding: var(--sp-5);
+  }
+}
+
+@media (max-width: 920px) {
+  #session-summary {
+    padding: var(--sp-4);
   }
 }

@@ -15,6 +15,20 @@
 import { SESSION_DATA } from '../data/seed.js';
 
 /**
+ * One-time setup: delegates self-rating button clicks on the explanation panel.
+ *
+ * @param {HTMLElement} panelEl
+ * @param {function}    onAction
+ */
+export function setupExplanationPanel(panelEl, onAction) {
+  panelEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-rating]');
+    if (!btn || btn.disabled) return;
+    onAction({ type: 'selfRate', rating: btn.dataset.rating });
+  });
+}
+
+/**
  * Render the explanation panel and toggle the reveal class on sessionBodyEl.
  *
  * @param {HTMLElement} panelEl       — #explanation-panel
@@ -47,8 +61,15 @@ export function renderExplanationPanel(panelEl, sessionBodyEl, state) {
 function buildExplanationHtml(item, question) {
   const sections = [buildResultSummary(item, question)];
 
+  if (question.questionType === 'flashcard') {
+    sections.push(buildRecallRatingScaffold(item));
+    sections.push(buildFlashcardBack(question));
+    sections.push(buildReference(question));
+    return sections.filter(Boolean).join('\n');
+  }
+
   if (question.questionType === 'short_answer') {
-    sections.push(buildRecallRatingScaffold());
+    sections.push(buildRecallRatingScaffold(item));
     sections.push(buildUserAnswerReview(item));
     sections.push(buildModelAnswer(question));
     sections.push(buildMainExplanation(question));
@@ -65,18 +86,24 @@ function buildExplanationHtml(item, question) {
 
 function buildResultSummary(item, question) {
   const isShortAnswer = question.questionType === 'short_answer';
+  const isFlashcard   = question.questionType === 'flashcard';
 
-  if (isShortAnswer) {
+  if (isShortAnswer || isFlashcard) {
+    const kicker = isFlashcard ? 'Flashcard' : 'Review State';
+    const title  = isFlashcard ? 'Back Side Revealed' : 'Model Answer Open';
+    const detail = isFlashcard
+      ? 'Review the back side below, then rate how well you recalled it.'
+      : 'Compare your response against the model answer, then rate recall.';
     return `
       <div class="result-summary result-revealed">
         <div class="result-summary-main">
-          <div class="result-kicker">Review State</div>
+          <div class="result-kicker">${kicker}</div>
           <div class="result-title-row">
-            <span class="result-icon">◷</span>
-            <span class="result-text">Model Answer Open</span>
+            <span class="result-icon">◗</span>
+            <span class="result-text">${title}</span>
           </div>
         </div>
-        <div class="result-detail">Compare your response against the model answer, then use the reserved recall controls below.</div>
+        <div class="result-detail">${detail}</div>
       </div>
     `;
   }
@@ -177,16 +204,47 @@ function buildChoiceBreakdown(item, question) {
   `;
 }
 
-function buildRecallRatingScaffold() {
+function buildRecallRatingScaffold(item) {
+  const current = item?.selfRating;
+  const syncState = item?.srRatingSyncState || 'idle';
+  const isSaving = syncState === 'saving';
+  const isSaved  = syncState === 'saved';
+  const ratings = ['Again', 'Hard', 'Good', 'Easy'];
+  const buttonsHtml = ratings.map((r) => {
+    const isActive = current === r;
+    return `<button
+      class="btn recall-btn recall-btn-${r.toLowerCase()}${isActive ? ' active' : ''}"
+      data-rating="${r}"
+      ${isSaving || isActive ? 'disabled' : ''}
+      title="${r}"
+    >${r}</button>`;
+  }).join('\n    ');
+
+  const statusHtml = isSaving
+    ? '<div class="recall-status">Saving rating...</div>'
+    : isSaved
+      ? '<div class="recall-status recall-status-saved">Saved ✓</div>'
+      : (item?.srRatingError
+        ? `<div class="recall-status recall-status-error">${escapeHtml(item.srRatingError)}</div>`
+        : '');
+
   return `
     <div class="expl-section recall-section">
-      <div class="expl-heading">Recall Rating</div>
-      <div class="recall-rating-shell" aria-hidden="true">
-        <span class="recall-pill">Again</span>
-        <span class="recall-pill">Hard</span>
-        <span class="recall-pill is-primary">Good</span>
-        <span class="recall-pill">Easy</span>
+      <div class="expl-heading">Rate Recall</div>
+      <div class="recall-rating-shell">
+        ${buttonsHtml}
       </div>
+      ${statusHtml}
+    </div>
+  `;
+}
+
+function buildFlashcardBack(question) {
+  if (!question.mainExplanationHtml) return '';
+  return `
+    <div class="expl-section expl-section-emphasis flashcard-back-section">
+      <div class="expl-heading">Back Side</div>
+      <div class="expl-body">${question.mainExplanationHtml}</div>
     </div>
   `;
 }

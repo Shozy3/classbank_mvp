@@ -7,6 +7,7 @@ const MODE_LABELS = {
 
 let sessionList = [];
 let selectedSessionId = null;
+let adaptiveWeakItems = [];
 
 const els = {
   list: document.getElementById('history-list'),
@@ -40,6 +41,14 @@ function formatDuration(seconds) {
 function numberOrZero(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function updateCountLabel() {
@@ -113,6 +122,22 @@ function renderDetail(detail) {
     ? detail.topicBreakdown.slice(0, 4).map((entry) => `<span class="badge">${entry.topicName}: ${entry.itemCount}</span>`).join('')
     : '';
 
+  const scopedTopicIds = new Set(Array.isArray(detail.topicBreakdown)
+    ? detail.topicBreakdown.map((entry) => entry.topicId).filter((id) => typeof id === 'string')
+    : []);
+
+  const scopedWeakItems = adaptiveWeakItems
+    .filter((row) => scopedTopicIds.size === 0 || scopedTopicIds.has(row.topicId))
+    .slice(0, 4);
+
+  const adaptiveWeakMarkup = scopedWeakItems.length > 0
+    ? scopedWeakItems.map((row) => {
+      const score = Number(row.weaknessScore);
+      const percent = Number.isFinite(score) ? `${(score * 100).toFixed(1)}%` : 'N/A';
+      return `<span class="badge">${escapeHtml(row.topicName || 'Topic')}: ${percent}</span>`;
+    }).join('')
+    : '<span class="detail-value">No adaptive weak-question signals yet.</span>';
+
   els.detailEmpty.hidden = true;
   els.detail.hidden = false;
   els.detail.innerHTML = `
@@ -151,11 +176,31 @@ function renderDetail(detail) {
     </div>
 
     <div class="detail-card">
+      <h3>Adaptive MCQ Focus</h3>
+      <div class="badge-list">${adaptiveWeakMarkup}</div>
+    </div>
+
+    <div class="detail-card">
       <h3>Follow-up</h3>
       <a class="action-link" href="../practice-setup/index.html">Open Practice Setup</a>
       ${hasCorruptRecord ? '<div class="badge warn" style="margin-top: 10px;">Corrupt session metadata detected. Showing safe fallback view.</div>' : ''}
     </div>
   `;
+}
+
+async function loadAdaptiveWeakItems() {
+  if (!window.api?.listAdaptiveWeakQuestions) {
+    adaptiveWeakItems = [];
+    return;
+  }
+
+  try {
+    const rows = await window.api.listAdaptiveWeakQuestions({ limit: 200 });
+    adaptiveWeakItems = Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    console.error('[review-history] Failed to load adaptive weak-question signals.', error);
+    adaptiveWeakItems = [];
+  }
 }
 
 async function selectSession(sessionId) {
@@ -195,6 +240,7 @@ async function loadHistory() {
   }
 
   try {
+    await loadAdaptiveWeakItems();
     const rows = await window.api.listSessionHistory({ limit: 200 });
     sessionList = Array.isArray(rows) ? rows : [];
     updateCountLabel();

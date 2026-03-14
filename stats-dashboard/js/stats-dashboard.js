@@ -3,6 +3,11 @@ function num(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function pct(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? `${n.toFixed(1)}%` : 'N/A';
+}
+
 function renderPrimary(streak) {
   const root = document.getElementById('stats-primary');
   if (!root) return;
@@ -51,6 +56,7 @@ function renderSecondary(summary) {
   const recent = summary.recentSessions || {};
   const answered = summary.answered || {};
   const due = summary.due || {};
+  const adaptiveReview = summary.adaptiveReview || {};
   const weakTopics = Array.isArray(summary.weakTopics) ? summary.weakTopics : [];
 
   const accuracy = answered.weightedAccuracyPercent == null
@@ -59,7 +65,7 @@ function renderSecondary(summary) {
 
   const weakTopicsMarkup = weakTopics.length
     ? weakTopics.map((topic) => `
-        <span class="topic-pill">${topic.topicName}: ${topic.weaknessPercent.toFixed(1)}%</span>
+        <span class="topic-pill">${topic.topicName}: ${pct(topic.combinedWeaknessPercent ?? topic.weaknessPercent)}</span>
       `).join('')
     : '<p>No weak-topic signals yet.</p>';
 
@@ -89,6 +95,7 @@ function renderSecondary(summary) {
         <div class="metric-row"><span class="metric-label">Due spaced items</span><span class="metric-value">${num(due.totalDue)}</span></div>
         <div class="metric-row"><span class="metric-label">Question due</span><span class="metric-value">${num(due.questionDue)}</span></div>
         <div class="metric-row"><span class="metric-label">Flashcard due</span><span class="metric-value">${num(due.flashcardDue)}</span></div>
+        <div class="metric-row"><span class="metric-label">Adaptive weak MCQs</span><span class="metric-value">${num(adaptiveReview.weakQuestionCount)}</span></div>
       </div>
       <div class="topic-pill-list" style="margin-top: 10px;">${weakTopicsMarkup}</div>
     </article>

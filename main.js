@@ -39,6 +39,8 @@ const {
   listDueSpacedReviewItems,
   getSpacedReviewDueCounts,
   recordSpacedReviewRating,
+  recordAdaptiveMcqResult,
+  listAdaptiveWeakQuestions,
   createBackup,
   restoreBackup,
 } = require('./db');
@@ -152,6 +154,8 @@ ipcMain.handle('db:updateItemFlags',      withDbHandler('updateItemFlags',      
 ipcMain.handle('db:listDueSpacedReviewItems', withDbHandler('listDueSpacedReviewItems', (p) => listDueSpacedReviewItems(p)));
 ipcMain.handle('db:getSpacedReviewDueCounts', withDbHandler('getSpacedReviewDueCounts', (p) => getSpacedReviewDueCounts(p)));
 ipcMain.handle('db:recordSpacedReviewRating', withDbHandler('recordSpacedReviewRating', (p) => recordSpacedReviewRating(p)));
+ipcMain.handle('db:recordAdaptiveMcqResult', withDbHandler('recordAdaptiveMcqResult', (p) => recordAdaptiveMcqResult(p)));
+ipcMain.handle('db:listAdaptiveWeakQuestions', withDbHandler('listAdaptiveWeakQuestions', (p) => listAdaptiveWeakQuestions(p)));
 ipcMain.handle('db:createBackup', withDbHandler('createBackup', (p) => createBackup(p)));
 ipcMain.handle('db:restoreBackup', withDbHandler('restoreBackup', (p) => restoreBackup(p)));
 
