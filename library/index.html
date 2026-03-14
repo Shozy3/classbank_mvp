@@ -4,31 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ClassBank — Library</title>
+  <link rel="stylesheet" href="../practice-session/css/layout.css">
   <link rel="stylesheet" href="css/library.css">
 </head>
-<body>
+<body data-nav-active="library">
 
 <div id="app-shell">
 
-  <!-- Nav sidebar -->
-  <nav id="app-nav" aria-label="Main navigation">
-    <div class="nav-logo">Class<span>Bank</span></div>
-    <a class="nav-link active" href="../library/index.html" aria-current="page">
-      <span class="nav-link-icon">▤</span> Library
-    </a>
-    <a class="nav-link" href="#" tabindex="-1">
-      <span class="nav-link-icon">✎</span> Authoring
-    </a>
-    <a class="nav-link" href="../practice-setup/index.html">
-      <span class="nav-link-icon">◈</span> Practice Setup
-    </a>
-    <a class="nav-link" href="../review-history/index.html">
-      <span class="nav-link-icon">◷</span> Review History
-    </a>
-    <a class="nav-link" href="../stats-dashboard/index.html">
-      <span class="nav-link-icon">▦</span> Stats
-    </a>
-  </nav>
+  <!-- Shared nav sidebar -->
+  <nav id="app-nav" aria-label="Main navigation"></nav>
 
   <!-- Library workspace -->
   <div id="library-workspace">
@@ -178,6 +162,7 @@
 <script src="js/components/hierarchy-tree.js"></script>
 <script src="js/components/item-list.js"></script>
 <script src="js/components/preview-panel.js"></script>
+<script src="../shared/js/app-shell.js"></script>
 <script src="js/library.js"></script>
 </body>
 </html>

@@ -73,7 +73,7 @@ function createMainWindow() {
     }
   });
 
-  const entryPath = path.join(__dirname, 'practice-setup', 'index.html');
+  const entryPath = path.join(__dirname, 'home', 'index.html');
   mainWindow.loadFile(entryPath);
 
   if (process.env.NODE_ENV === 'development') {

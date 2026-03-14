@@ -12,6 +12,9 @@ Browse and manage all questions and flashcards by course structure.
 
 ## Layout
 
+### App shell
+Uses the shared persistent sidebar navigation used by all top-level screens.
+
 ### Left pane
 Course → Unit → Topic hierarchy
 

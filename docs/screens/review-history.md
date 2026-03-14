@@ -11,6 +11,9 @@ Show prior sessions and make recent study activity inspectable.
 
 ## Layout
 
+### App shell
+Uses the shared persistent sidebar navigation used by all top-level screens.
+
 ### Left/main list
 Recent sessions in chronological or grouped order
 

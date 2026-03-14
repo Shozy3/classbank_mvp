@@ -12,6 +12,9 @@ Build a study session from filters and mode settings.
 
 ## Layout
 
+### App shell
+Uses the shared persistent sidebar navigation used by all top-level screens.
+
 ### Left column
 Filters:
 - course

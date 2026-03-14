@@ -11,35 +11,11 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
 </head>
-<body>
+<body data-nav-active="practice-session">
 
 <div id="app-shell">
 
-  <!-- =====================================================================
-       App Nav Sidebar
-  ====================================================================== -->
-  <nav id="app-nav" aria-label="Main navigation">
-    <div class="nav-logo">Class<span>Bank</span></div>
-
-    <a class="nav-link" href="../library/index.html">
-      <span class="nav-link-icon">▤</span> Library
-    </a>
-    <a class="nav-link" href="../authoring/index.html">
-      <span class="nav-link-icon">✎</span> Authoring
-    </a>
-    <a class="nav-link" href="../practice-setup/index.html">
-      <span class="nav-link-icon">◈</span> Practice Setup
-    </a>
-    <a class="nav-link active" href="#" aria-current="page">
-      <span class="nav-link-icon">▷</span> Practice Session
-    </a>
-    <a class="nav-link" href="../review-history/index.html">
-      <span class="nav-link-icon">◷</span> Review History
-    </a>
-    <a class="nav-link" href="../stats-dashboard/index.html">
-      <span class="nav-link-icon">▦</span> Stats Dashboard
-    </a>
-  </nav>
+  <nav id="app-nav" aria-label="Main navigation"></nav>
 
   <!-- =====================================================================
        Session Root
@@ -109,6 +85,7 @@
 
 </div><!-- /#app-shell -->
 
+<script src="../shared/js/app-shell.js"></script>
 <script type="module" src="js/session.js"></script>
 </body>
 </html>

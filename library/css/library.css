@@ -129,52 +129,6 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
   overflow: hidden;
 }
 
-#app-nav {
-  width: 172px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-panel);
-  border-right: 1px solid var(--border-subtle);
-  padding: var(--sp-5) 0;
-  overflow: hidden;
-}
-
-.nav-logo {
-  padding: 0 18px var(--sp-5);
-  font-size: var(--text-size-section);
-  font-weight: var(--text-weight-semibold);
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: var(--sp-2);
-}
-.nav-logo span { color: var(--accent); }
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: 8px 18px;
-  font-size: var(--text-size-small);
-  font-weight: var(--text-weight-medium);
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  border-radius: 0 var(--radius-control) var(--radius-control) 0;
-  margin-right: var(--sp-3);
-  transition: color var(--transition-fast), background var(--transition-fast);
-  white-space: nowrap;
-}
-.nav-link:hover { background: var(--hover-bg); color: var(--text-primary); }
-.nav-link.active { color: var(--accent); background: var(--accent-muted); border-left-color: var(--accent); }
-.nav-link:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-.nav-link-icon { font-size: 13px; flex-shrink: 0; }
-
 /* --------------------------------------------------------------------------
    Library workspace — three pane grid
    -------------------------------------------------------------------------- */

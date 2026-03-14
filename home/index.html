@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClassBank - Home</title>
+  <link rel="stylesheet" href="../practice-session/css/tokens.css">
+  <link rel="stylesheet" href="../practice-session/css/reset.css">
+  <link rel="stylesheet" href="../practice-session/css/layout.css">
+  <link rel="stylesheet" href="css/home.css">
+</head>
+<body data-nav-active="home">
+  <div id="app-shell">
+    <nav id="app-nav" aria-label="Main navigation"></nav>
+
+    <main id="home-root" aria-label="Home workspace">
+      <header id="home-header">
+        <div>
+          <div class="header-kicker">ClassBank</div>
+          <h1>Home</h1>
+        </div>
+        <p id="home-subtitle">Start quickly, see your content footprint, and jump into the next study action.</p>
+      </header>
+
+      <section id="home-body">
+        <section class="panel" aria-label="Quick actions">
+          <div class="panel-title-row">
+            <h2>Quick Actions</h2>
+          </div>
+          <div class="action-grid">
+            <a class="action-card" href="../library/index.html">
+              <span class="action-icon">▤</span>
+              <strong>Open Library</strong>
+              <span>Browse and manage your course hierarchy.</span>
+            </a>
+            <a class="action-card" href="../authoring/index.html">
+              <span class="action-icon">✎</span>
+              <strong>Create Content</strong>
+              <span>Write and edit questions, flashcards, and explanations.</span>
+            </a>
+            <a class="action-card" href="../practice-setup/index.html">
+              <span class="action-icon">◈</span>
+              <strong>Build Session</strong>
+              <span>Set filters and launch your next practice session.</span>
+            </a>
+            <a class="action-card" href="../review-history/index.html">
+              <span class="action-icon">◷</span>
+              <strong>Review History</strong>
+              <span>Inspect completed sessions and outcomes.</span>
+            </a>
+            <a class="action-card" href="../stats-dashboard/index.html">
+              <span class="action-icon">▦</span>
+              <strong>View Stats</strong>
+              <span>Check trend snapshots and next-action indicators.</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Content summary">
+          <div class="panel-title-row">
+            <h2>Content Summary</h2>
+            <button id="btn-refresh-summary" class="btn-ghost" type="button">Refresh</button>
+          </div>
+          <div class="metric-grid" id="summary-metrics" aria-live="polite">
+            <article class="metric-card">
+              <div class="metric-label">Courses</div>
+              <div class="metric-value" id="metric-courses">-</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Units</div>
+              <div class="metric-value" id="metric-units">-</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Topics</div>
+              <div class="metric-value" id="metric-topics">-</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Questions</div>
+              <div class="metric-value" id="metric-questions">-</div>
+            </article>
+          </div>
+          <p id="summary-status" class="summary-status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel" aria-label="Due review summary">
+          <div class="panel-title-row">
+            <h2>Due For Review</h2>
+          </div>
+          <div class="due-row" aria-live="polite">
+            <div class="due-total-wrap">
+              <div class="due-label">Total due now</div>
+              <div id="due-total" class="due-total">-</div>
+            </div>
+            <div class="due-breakdown">
+              <div><span>Questions</span><strong id="due-questions">-</strong></div>
+              <div><span>Flashcards</span><strong id="due-flashcards">-</strong></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="../shared/js/app-shell.js"></script>
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>

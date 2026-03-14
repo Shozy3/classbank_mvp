@@ -15,6 +15,9 @@ Provide a lightweight progress overview for the local MVP.
 
 ## Layout
 
+### App shell
+Uses the shared persistent sidebar navigation used by all top-level screens.
+
 ### Top
 Primary streak card
 

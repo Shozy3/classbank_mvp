@@ -26,6 +26,7 @@ Not a toy. Not a note app wearing a fake moustache.
 ## Global layout
 
 The app contains these main sections:
+- Home
 - Library
 - Authoring
 - Practice Setup
@@ -34,6 +35,30 @@ The app contains these main sections:
 - Stats Dashboard
 
 High-level navigation should be persistent and visually obvious.
+All top-level screens use the same sidebar menu structure and active-state treatment.
+
+---
+
+## 0. Home
+
+### Purpose
+Provide a fast landing view that orients the user and routes directly into the core study loop.
+
+### Layout
+- persistent app sidebar
+- quick actions panel
+- content summary panel
+- due-for-review panel
+
+### Core components
+- quick action links to all major screens
+- course/unit/topic/question totals
+- spaced-review due counts (total, question, flashcard)
+
+### UX rules
+- should load first on app launch
+- should never block progression to Library, Authoring, or Practice Setup
+- should remain lightweight and operational, not analytic-heavy
 
 ---
 
